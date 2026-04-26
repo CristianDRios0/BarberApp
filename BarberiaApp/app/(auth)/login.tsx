@@ -1,8 +1,9 @@
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, useColorScheme } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, useColorScheme } from 'react-native';
 import { CustomInput } from '@/components/CustomInput';
 import { CustomButton } from '@/components/CustomButton';
 import { useRouter } from 'expo-router';
 import Colors from '@/constants/Colors'; 
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function LoginScreen() {
   const router = useRouter(); // Inicializa el enrutador para navegación
@@ -21,11 +22,6 @@ export default function LoginScreen() {
           <Text style={styles.welcomeSubtitle}>Adéntrate en el santuario del cuidado personal.</Text>
 
           <CustomInput label="Correo electrónico" placeholder="executive@ritual.com" />
-          <CustomInput label="Password" placeholder="••••••••" secureTextEntry />
-
-          <TouchableOpacity>
-            <Text style={styles.forgotText}>¿Olvidaste tu contraseña?</Text>
-          </TouchableOpacity>
 
           <View style={{ marginTop: 20 }}>
             <CustomButton
@@ -38,7 +34,7 @@ export default function LoginScreen() {
             <Text style={styles.signUpText}>
               ¿No tienes una cuenta?{' '}
             </Text>
-            <TouchableOpacity onPress={() => console.log('Ir a Registro')}>
+            <TouchableOpacity onPress={() => router.push('/register')}>
               <Text style={styles.signUpLink}>
                 Regístrate.
               </Text>
