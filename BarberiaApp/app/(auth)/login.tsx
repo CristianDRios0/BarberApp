@@ -26,7 +26,7 @@ export default function LoginScreen() {
           <View style={{ marginTop: 20 }}>
             <CustomButton
               title="Login"
-              onPress={() => router.replace('/(tabs)')}
+              onPress={() => router.replace('/verify')}
             />
           </View>
 
