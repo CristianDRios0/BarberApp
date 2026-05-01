@@ -33,7 +33,7 @@ export default function VerifyScreen() {
             <CustomButton
               title="Confirmar Ritual"
               onPress={() => {
-                router.replace('/(admin)/manageStaff');
+                router.replace('/(client)');
               }}
             />
           </View>
