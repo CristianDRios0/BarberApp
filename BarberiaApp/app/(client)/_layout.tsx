@@ -28,7 +28,7 @@ export default function ClientLayout() {
                 },
             }}>
             <Tabs.Screen
-                name="index"
+                name="booking"
                 options={{
                     title: 'Reserva',
                     tabBarIcon: ({ color }) => <Ionicons name="cut-outline" size={24} color={color} />

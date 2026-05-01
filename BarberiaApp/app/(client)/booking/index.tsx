@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Colors from '@/constants/Colors';
 import { CustomButton } from '@/components/CustomButton';
 import { MainHeader } from '@/components/MainHeader';
+import { router } from 'expo-router';
 
 const SERVICES = [
     { id: '1', name: 'The Ritual Haircut', duration: '45 MIN • WASH & STYLE', price: 55 },
@@ -105,7 +106,7 @@ export default function BookingScreen() {
                         <Text style={styles.summaryText}>{currentService?.name.toUpperCase()}</Text>
                     </View>
                 </View>
-                <CustomButton title="Continue to Booking" onPress={() => { }} />
+                <CustomButton title="Continue to Booking" onPress={() => router.push('/booking/calendar')} />
             </View>
         </SafeAreaView>
     );
