@@ -43,7 +43,7 @@ export default function ManageServicesScreen() {
                 ListHeaderComponent={() => (
                     <View style={styles.headerSection}>
                         {/* Etiquetas de navegación interna */}
-                        <Text style={styles.stepLabel}>CONFIGURACIÓN DE MENÚ</Text>
+                        <Text style={styles.stepLabel}>CONFIGURACIÓN DE SERVICIOS</Text>
                         
                         <View style={styles.titleRow}>
                             <View>
