@@ -5,7 +5,6 @@ import { useRouter } from 'expo-router';
 import { CustomInput } from '@/components/CustomInput';
 import { CustomButton } from '@/components/CustomButton';
 import Colors from '@/constants/Colors';
-import { replace } from 'expo-router/build/global-state/routing';
 
 export default function VerifyScreen() {
   const router = useRouter();
@@ -33,7 +32,7 @@ export default function VerifyScreen() {
             <CustomButton
               title="Confirmar Ritual"
               onPress={() => {
-                router.replace('/(admin)/manageStaff');
+                router.replace('/(client)/booking');
               }}
             />
           </View>
