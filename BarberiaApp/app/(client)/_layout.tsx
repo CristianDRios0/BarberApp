@@ -34,6 +34,13 @@ export default function ClientLayout() {
                     tabBarIcon: ({ color }) => <Ionicons name="cut-outline" size={24} color={color} />
                 }}
             />
+            <Tabs.Screen
+                name="dates"
+                options={{
+                    title: 'Citas',
+                    tabBarIcon: ({ color }) => <Ionicons name="calendar-outline" size={24} color={color} />
+                }}
+            />
         </Tabs>
     );
 }
