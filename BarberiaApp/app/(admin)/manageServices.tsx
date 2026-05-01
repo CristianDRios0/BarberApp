@@ -4,41 +4,54 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '@/constants/Colors';
 import { MainHeader } from '@/components/MainHeader';
-import { AdminItemCard } from '@/components/StaffCard'; 
+import { AdminItemCard } from '@/components/StaffCard';
 
-const STAFF_DATA = [
-    { id: '1', name: 'Julian Vance', role: 'MASTER BARBER', image: 'https://images.unsplash.com/photo-1503443207922-dff7d543fd0e?q=80&w=200' },
-    { id: '2', name: 'Marcus Thorne', role: 'SENIOR BARBER', image: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?q=80&w=200' },
-    { id: '3', name: 'Elias Gray', role: 'BARBER', image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200' },
+// Definición de la interfaz para tipado estricto
+interface Service {
+  id: string;
+  name: string;
+  duration: string;
+  price: string;
+  icon: string;
+}
+
+// Datos de Mockup basados en tu menú de barbería
+const SERVICES_DATA: Service[] = [
+    { id: '1', name: 'The Signature Cut', duration: '45 mins', price: '$55.00', icon: 'content-cut' },
+    { id: '2', name: 'Classic Straight Shave', duration: '30 mins', price: '$40.00', icon: 'face-man-shimmer' },
+    { id: '3', name: 'Beard Sculpting', duration: '20 mins', price: '$25.00', icon: 'hand-wash' },
+    { id: '4', name: 'Hair & Beard Ritual', duration: '75 mins', price: '$85.00', icon: 'mustache' },
 ];
 
-export default function StaffScreen() {
+export default function ManageServicesScreen() {
     const colorScheme = useColorScheme() ?? 'light';
     const themeColors = Colors[colorScheme];
     const styles = createStyles(themeColors);
 
-    const handleCreate = () => console.log("Crear nuevo barbero");
-    const handleEdit = (item: any) => console.log("Editar:", item.name);
-    const handleDelete = (id: string) => console.log("Eliminar ID:", id);
+    // Handlers para acciones (Por ahora solo logs para el mockup)
+    const handleCreate = () => console.log("Navegar a formulario de creación");
+    const handleEdit = (item: Service) => console.log("Editar servicio:", item.name);
+    const handleDelete = (id: string) => console.log("Eliminar servicio ID:", id);
 
     return (
         <SafeAreaView style={styles.container}>
             <MainHeader />
             
             <FlatList
-                data={STAFF_DATA}
+                data={SERVICES_DATA}
                 keyExtractor={(item) => item.id}
-                // Insertamos todo el encabezado aquí para que haga scroll con la lista
                 ListHeaderComponent={() => (
                     <View style={styles.headerSection}>
-                        <Text style={styles.stepLabel}>GESTIÓN INTERNA</Text>
+                        {/* Etiquetas de navegación interna */}
+                        <Text style={styles.stepLabel}>CONFIGURACIÓN DE MENÚ</Text>
                         
                         <View style={styles.titleRow}>
                             <View>
-                                <Text style={styles.mainTitle}>Staff</Text>
-                                <Text style={styles.subtitle}>Administra tus Barberos</Text>
+                                <Text style={styles.mainTitle}>Servicios</Text>
+                                <Text style={styles.subtitle}>Gestiona tus Servicios</Text>
                             </View>
 
+                            {/* Botón CREAR consistente con el diseño de Staff */}
                             <TouchableOpacity 
                                 style={[styles.createButton, { backgroundColor: themeColors.tint }]} 
                                 onPress={handleCreate}
@@ -49,19 +62,21 @@ export default function StaffScreen() {
                             </TouchableOpacity>
                         </View>
 
+                        {/* Divisor decorativo característico */}
                         <View style={styles.yellowDivider} />
                     </View>
                 )}
                 renderItem={({ item }) => (
                     <AdminItemCard 
                         title={item.name}
-                        subtitle={item.role}
-                        imageUri={item.image} 
+                        subtitle={item.duration}
+                        extraInfo={item.price}
+                        iconName={item.icon} // Aquí pasamos el icono en lugar de imagen
                         onEdit={() => handleEdit(item)}
                         onDelete={() => handleDelete(item.id)}
                     />
                 )}
-                contentContainerStyle={styles.scrollContent}
+                contentContainerStyle={styles.listContent}
                 showsVerticalScrollIndicator={false}
             />
         </SafeAreaView>
@@ -73,7 +88,7 @@ const createStyles = (themeColors: any) => StyleSheet.create({
         flex: 1, 
         backgroundColor: themeColors.background 
     },
-    scrollContent: { 
+    listContent: { 
         paddingHorizontal: 25,
         paddingBottom: 40 
     },
@@ -86,13 +101,12 @@ const createStyles = (themeColors: any) => StyleSheet.create({
         fontSize: 11, 
         color: themeColors.tint, 
         letterSpacing: 2,
-        textTransform: 'uppercase'
     },
     titleRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'flex-end',
-        marginTop: 10
+        marginTop: 10,
     },
     mainTitle: { 
         fontFamily: 'Serif', 
@@ -112,14 +126,13 @@ const createStyles = (themeColors: any) => StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: 18,
         paddingVertical: 10,
-        marginBottom: 5,
     },
     createButtonText: {
         fontFamily: 'InterBold',
         fontSize: 12,
         color: '#000',
         marginLeft: 4,
-        letterSpacing: 0.5
+        letterSpacing: 0.5,
     },
     yellowDivider: { 
         width: 80, 
