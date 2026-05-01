@@ -36,11 +36,25 @@ export default function AdminLayout() {
                 },
             }}>
             <Tabs.Screen
-                name="index"
+                name="manageStaff"
                 options={{
-                    title: 'Reserva',
-                    tabBarIcon: ({ color }) => <Ionicons name="cut-outline" size={24} color={color} />
+                    title: 'Barberos',
+                    tabBarIcon: ({ color }) => <Ionicons name="people-outline" size={24} color={color} />
                 }}
+            />
+            <Tabs.Screen
+                name="manageServices"
+                options={{
+                    title: 'Servicios',
+                    tabBarIcon: ({ color }) => <Ionicons name="construct-outline" size={24} color={color} />
+                }}
+            />
+            <Tabs.Screen
+             name = "manageReport"
+             options={{
+                title: 'Reportes',
+                tabBarIcon: ({color}) => <Ionicons name='stats-chart-outline' size ={24} color ={color} />
+             }}
             />
         </Tabs>
     );
