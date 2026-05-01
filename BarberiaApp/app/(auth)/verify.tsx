@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { CustomInput } from '@/components/CustomInput';
 import { CustomButton } from '@/components/CustomButton';
 import Colors from '@/constants/Colors';
+import { replace } from 'expo-router/build/global-state/routing';
 
 export default function VerifyScreen() {
   const router = useRouter();
@@ -39,7 +40,7 @@ export default function VerifyScreen() {
 
           <View style={styles.resendContainer}>
             <Text style={styles.resendText}>¿No recibiste el código?{' '}</Text>
-            <TouchableOpacity onPress={() => console.log('Reenviar código')}>
+            <TouchableOpacity onPress={()  => console.log('Reenviar código')}>
               <Text style={styles.resendLink}>Reenviar.</Text>
             </TouchableOpacity>
           </View>
