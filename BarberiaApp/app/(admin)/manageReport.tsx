@@ -1,8 +1,6 @@
 import React from 'react';
 import { StyleSheet, ScrollView, View, Text, useColorScheme } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-// Importación de constantes y componentes base
 import Colors from '@/constants/Colors';
 import { MainHeader } from '@/components/MainHeader';
 

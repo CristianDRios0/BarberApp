@@ -32,7 +32,7 @@ export default function VerifyScreen() {
             <CustomButton
               title="Confirmar Ritual"
               onPress={() => {
-                router.replace('/(client)/booking');
+                router.replace('/(barber)/manageShift'); // Redirige al dashboard del barbero
               }}
             />
           </View>
