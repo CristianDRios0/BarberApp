@@ -6,9 +6,11 @@ interface Props {
   label: string;
   placeholder: string;
   secureTextEntry?: boolean;
+  value: string;
+  onChangeText: (text: string) => void;
 }
 
-export const CustomInput = ({ label, placeholder, secureTextEntry }: Props) => {
+export const CustomInput = ({ label, placeholder, secureTextEntry, value, onChangeText }: Props) => {
 
   const colorScheme = useColorScheme() ?? 'light';
   const themeColors = Colors[colorScheme];
@@ -24,6 +26,8 @@ export const CustomInput = ({ label, placeholder, secureTextEntry }: Props) => {
         secureTextEntry={secureTextEntry}
         cursorColor={themeColors.tint}
         autoCapitalize="none"
+        value={value}
+        onChangeText={onChangeText}
       />
     </View>
   );
