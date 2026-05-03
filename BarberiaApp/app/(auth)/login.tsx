@@ -2,9 +2,10 @@ import { View, Text, StyleSheet, TouchableOpacity, useColorScheme } from 'react-
 import { CustomInput } from '@/components/CustomInput';
 import { CustomButton } from '@/components/CustomButton';
 import { useRouter } from 'expo-router';
-import Colors from '@/constants/Colors'; 
+import Colors from '@/constants/Colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
+import { login } from '@/services/auth-services';
 
 export default function LoginScreen() {
   const router = useRouter(); // Inicializa el enrutador para navegación
@@ -12,6 +13,23 @@ export default function LoginScreen() {
   const themeColors = Colors[colorScheme]; // Obtiene los colores definidos para el tema actual en la contante Colors.ts
   const styles = createStyles(themeColors);  // Crea los estilos utilizando los colores del tema actual
   const [selectedRole, setSelectedRole] = useState('CLIENT'); // Estado para controlar el rol seleccionado, por defecto es cliente
+  const [email, setEmail] = useState(''); // Estado para controlar el valor del correo electrónico ingresado por el usuario
+
+  const handleLogin = async (email: string) => {
+    if (!email || email.trim() === ""){
+      alert('Debes de ingresar tu correo electronico para continuar');
+      return;
+    }
+    try {
+      await login(email);
+      router.replace({
+        pathname: '/verify',
+        params: {email: email, role: selectedRole}
+      })
+    } catch (error) {
+      alert('Error al iniciar sesión: ' + (error as Error).message);
+    }
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -23,25 +41,19 @@ export default function LoginScreen() {
           <Text style={styles.welcomeTitle}>Bienvenido</Text>
           <Text style={styles.welcomeSubtitle}>Adéntrate en el santuario del cuidado personal.</Text>
 
-          <Text style={styles.roleLabel}>SELECCIONE SU ROL</Text>
-          <View style={styles.roleRow}>
-            {['CLIENT', 'BARBER', 'ADMIN'].map((role) => (
-              <TouchableOpacity 
-                key={role} 
-                style={[styles.roleButton, role === selectedRole && styles.roleActive]}
-                onPress={() => setSelectedRole(role)}
-              >
-                <Text style={[styles.roleText, role === selectedRole && styles.roleTextActive]}>{role}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <CustomInput label="Correo electrónico" placeholder="executive@ritual.com" />
+          <CustomInput 
+            label="Correo electrónico" 
+            placeholder="executive@ritual.com" 
+            value={email}
+            onChangeText={(text) => setEmail(text)}
+            />
 
           <View style={{ marginTop: 20 }}>
             <CustomButton
               title="Login"
-              onPress={() => router.replace('/verify')}
+              onPress={() => {
+                handleLogin(email)
+              }}
             />
           </View>
 
@@ -63,14 +75,14 @@ export default function LoginScreen() {
 }
 
 const createStyles = (themeColors: any) => StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: themeColors.background 
+  container: {
+    flex: 1,
+    backgroundColor: themeColors.background
   },
-  content: { 
-    flex: 1, 
-    padding: 30, 
-    justifyContent: 'center' 
+  content: {
+    flex: 1,
+    padding: 30,
+    justifyContent: 'center'
   },
   logo: {
     fontFamily: 'Serif',
@@ -121,38 +133,5 @@ const createStyles = (themeColors: any) => StyleSheet.create({
     fontSize: 14,
     textDecorationLine: 'underline',
     color: themeColors.tint
-  },
-  roleLabel: {
-    color: themeColors.tabIconDefault,
-    fontFamily: 'InterSemi',
-    fontSize: 10,
-    letterSpacing: 1,
-    marginBottom: 10,
-  },
-  roleRow: { 
-    flexDirection: 'row', 
-    gap: 10, 
-    marginBottom: 30 
-  },
-  roleButton: {
-    flex: 1,
-    paddingVertical: 12,
-    backgroundColor: '#1F2020', 
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#333',
-  },
-  roleActive: { 
-    backgroundColor: themeColors.tint, 
-    borderColor: themeColors.tint,
-  },
-  roleText: { 
-    color: themeColors.tabIconDefault, 
-    fontFamily: 'InterSemi', 
-    fontSize: 12 
-  },
-  roleTextActive: { 
-    color: themeColors.background, 
-    fontWeight: 'bold' 
   }
 });
