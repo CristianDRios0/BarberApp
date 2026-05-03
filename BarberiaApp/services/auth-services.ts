@@ -31,3 +31,11 @@ export const verifyCode = async (email: string, token: string) => {
     }
     return data;
 }
+
+export const logout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+        console.log('Error al cerrar sesión:', error);
+        throw new Error(error.message);
+    }
+}

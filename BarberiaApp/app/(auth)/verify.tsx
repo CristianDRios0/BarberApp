@@ -7,6 +7,7 @@ import { CustomButton } from '@/components/CustomButton';
 import Colors from '@/constants/Colors';
 import { verifyCode, login } from '@/services/auth-services';
 import { getUserRole } from '@/services/client-services';
+import { InfoModal } from '@/components/InfoModal';
 
 export default function VerifyScreen() {
     const router = useRouter();
@@ -21,6 +22,11 @@ export default function VerifyScreen() {
     const [timeLeft, setTimeLeft] = useState(INITIAL_TIME);
     const [canResend, setCanResend] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [infoModal, setInfoModal] = useState({
+        visible: false,
+        title: '',
+        message: ''
+    }); // Estado para controlar la visibilidad y contenido de la modal de información
 
     useEffect(() => {
         if (timeLeft <= 0) {
@@ -47,17 +53,29 @@ export default function VerifyScreen() {
                 await login(email);
                 setTimeLeft(INITIAL_TIME);
                 setCanResend(false);
-                alert("Se ha enviado un nuevo código a tu correo.");
+                setInfoModal({
+                    visible: true,
+                    title: 'Código reenviado',
+                    message: 'Se ha enviado un nuevo código a tu correo.'
+                });
             } catch (error: any) {
-                alert(error.message);
+                setInfoModal({
+                    visible: true,
+                    title: 'Error al reenviar código',
+                    message: error.message || 'Ocurrió un error al intentar reenviar el código. Intenta nuevamente.'
+                });
             }
         }
     };
 
 
     const handleVerify = async (email: string, code: string) => {
-        if (!code || code.length < 4) {
-            alert("Por favor ingresa el código completo.");
+        if (!code || code.length < 8) {
+            setInfoModal({
+                visible: true,
+                title: 'Código incompleto',
+                message: 'Por favor ingresa el código completo.'
+            });
             return;
         }
 
@@ -86,11 +104,19 @@ export default function VerifyScreen() {
                     router.replace('/(admin)/manageReport');
                     break;
                 default:
-                    alert("Rol no reconocido en el sistema.");
+                    setInfoModal({
+                        visible: true,
+                        title: 'Rol no reconocido',
+                        message: 'Tu usuario no tiene un rol asignado correctamente en el sistema.'
+                    });
                     break;
             }
         } catch (error: any) {
-            alert(error.message || "Ocurrió un error inesperado");
+            setInfoModal({
+                visible: true,
+                title: 'Error de verificación',
+                message: error.message || 'Ocurrió un error al verificar el código. Intenta nuevamente.'
+            })
         } finally {
             setIsLoading(false);
         }
@@ -120,7 +146,7 @@ export default function VerifyScreen() {
                     <View style={styles.inputWrapper}>
                         <CustomInput
                             label="Código de Acceso"
-                            placeholder="0 0 0 0 0 0"
+                            placeholder="0 0 0 0 0 0 0 0"
                             value={otp}
                             onChangeText={(text) => setOtp(text)}
                         />
@@ -147,8 +173,13 @@ export default function VerifyScreen() {
                         </TouchableOpacity>
                     </View>
                 </View>
-
             </ScrollView>
+            <InfoModal
+                    visible={infoModal.visible}
+                    title={infoModal.title}
+                    message={infoModal.message}
+                    onClose={() => setInfoModal({ ...infoModal, visible: false })}
+                />
         </SafeAreaView>
     );
 }
