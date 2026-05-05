@@ -2,14 +2,14 @@ import { Tabs } from 'expo-router';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import Ionicons from '@expo/vector-icons/build/Ionicons';
-import { BarberProvider } from '@/context/BarberContext';
+
 
 export default function BarberLayout() {
     const colorScheme = useColorScheme() ?? 'light';
     const themeColors = Colors[colorScheme];
 
     return (
-        <BarberProvider>
+        <>
             <Tabs
                 screenOptions={{
                     headerShown: false,
@@ -44,6 +44,6 @@ export default function BarberLayout() {
                     }} />
 
             </Tabs>
-        </BarberProvider>
+        </>
     );
 }
