@@ -2,7 +2,7 @@ import { Perfil } from "@/models/Perfil";
 import { supabase } from "@/supabaseClient";
 
 export const getBarbers = async (): Promise<Perfil[]> => {
-    const {data, error } = await supabase.from('Perfil').select('*').eq('RolId', 2).order('id', { ascending: true });
+    const {data, error } = await supabase.from('Perfil').select('*').eq('rolId', 2).order('id', { ascending: true });
     if (error) {
         console.error('Error al cargar los barberos:', error.message);
         throw error;
