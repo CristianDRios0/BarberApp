@@ -31,12 +31,12 @@ export const barberService = {
     return data;
   },
 
-  // NUEVO: Función para obtener el horario actual del barbero
+  // Función para obtener el horario actual del barbero
   async getWorkSchedule(barberoId: string) {
     const { data, error } = await supabase
-      .from('turnos')
-      .select('dia_semana, hora_inicio, hora_fin')
-      .eq('barbero_id', barberoId);
+      .from('Turno')
+      .select('diaSemana, horaInicio, horaFin')
+      .eq('barberoId', barberoId);
     if (error) throw error;
     return data;
   }

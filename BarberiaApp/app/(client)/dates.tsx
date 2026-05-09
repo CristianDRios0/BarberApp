@@ -1,37 +1,42 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useColorScheme } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useColorScheme, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { MainHeader } from '@/components/MainHeader';
 import Colors from '@/constants/Colors';
-
-const APPOINTMENTS = [
-    {
-        id: '1',
-        service: 'Classic Taper & Hot Towel',
-        barber: 'Julian Vance',
-        date: 'Oct 24, 2023',
-        time: '14:30 PM',
-        price: '65.00',
-        status: 'CONFIRMED',
-        icon: 'cut'
-    },
-    {
-        id: '2',
-        service: 'Beard Sculpt & Shape',
-        barber: 'Julian Vance',
-        date: 'Nov 02, 2023',
-        time: '10:00 AM',
-        price: '45.00',
-        status: 'PENDING',
-        icon: 'brush'
-    }
-];
+import { useAuth } from '@/context/AuthContext';
+import { bookingService } from '@/services/booking-services';
+import { format } from 'date-fns/format';
+import { es } from 'date-fns/locale';
+import { useLocalSearchParams } from 'expo-router';
 
 export default function AppointmentsScreen() {
     const colorScheme = useColorScheme() ?? 'light';
     const themeColors = Colors[colorScheme];
     const styles = createStyles(themeColors);
+    const { authState } = useAuth();
+
+    const [bookings, setBookings] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    const { refresh } = useLocalSearchParams();
+
+    useEffect(() => {
+        const fetchMyBookings = async () => {
+            if (!authState.userId) return;
+            try {
+                setLoading(true);
+                const data = await bookingService.getClientBookings(authState.userId);
+                setBookings(data);
+            } catch (error) {
+                console.error(error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchMyBookings();
+    }, [authState.userId, refresh]);
 
     return (
         <SafeAreaView style={styles.container}>
@@ -44,52 +49,70 @@ export default function AppointmentsScreen() {
                     <Text style={styles.badgeText}>RESERVADAS</Text>
                 </View>
 
-                {APPOINTMENTS.map((item) => (
-                    <View key={item.id} style={styles.card}>
+                {loading ? (
+                    <ActivityIndicator size="large" color={themeColors.tint} style={{ marginTop: 50 }} />
+                ) : bookings.length > 0 ? (
+                    bookings.map((item) => {
+                        const dateObj = new Date(item.fechaHoraInicio);
+                        
+                        return (
+                            <View key={item.id} style={styles.card}>
+                                <View style={styles.cardHeader}>
+                                    <View style={styles.iconContainer}>
+                                        <Ionicons name="cut" size={24} color={themeColors.tint} />
+                                    </View>
 
-                        <View style={styles.cardHeader}>
-                            <View style={styles.iconContainer}>
-                                <Ionicons name={item.icon as any} size={24} color={themeColors.tint} />
-                            </View>
-
-                            <View style={styles.serviceInfo}>
-                                <View style={styles.rowJustified}>
-                                    <Text style={styles.serviceName}>{item.service}</Text>
-                                    <View style={[styles.statusBadge, item.status === 'PENDING' && styles.statusPending]}>
-                                        <Text style={styles.statusText}>{item.status}</Text>
+                                    <View style={styles.serviceInfo}>
+                                        <View style={styles.rowJustified}>
+                                            <Text style={styles.serviceName}>{item.Servicio?.nombre}</Text>
+                                            <View style={styles.statusBadge}>
+                                                <Text style={styles.statusText}>CONFIRMADA</Text>
+                                            </View>
+                                        </View>
+                                        <Text style={styles.barberName}>
+                                            con {item.barbero?.nombre} {item.barbero?.apellido}
+                                        </Text>
                                     </View>
                                 </View>
-                                <Text style={styles.barberName}>with {item.barber}</Text>
-                            </View>
-                        </View>
 
-                        <View style={styles.detailsRow}>
-                            <View style={styles.detailItem}>
-                                <Ionicons name="calendar-outline" size={14} color={themeColors.tabIconDefault} />
-                                <View style={styles.detailTextGroup}>
-                                    <Text style={styles.detailLabel}>FECHA</Text>
-                                    <Text style={styles.detailValue}>{item.date}</Text>
+                                <View style={styles.detailsRow}>
+                                    <View style={styles.detailItem}>
+                                        <Ionicons name="calendar-outline" size={14} color={themeColors.tabIconDefault} />
+                                        <View style={styles.detailTextGroup}>
+                                            <Text style={styles.detailLabel}>FECHA</Text>
+                                            <Text style={styles.detailValue}>
+                                                {format(dateObj, "dd 'de' MMM, yyyy", { locale: es })}
+                                            </Text>
+                                        </View>
+                                    </View>
+
+                                    <View style={styles.detailItem}>
+                                        <Ionicons name="time-outline" size={14} color={themeColors.tabIconDefault} />
+                                        <View style={styles.detailTextGroup}>
+                                            <Text style={styles.detailLabel}>HORA</Text>
+                                            <Text style={styles.detailValue}>
+                                                {format(dateObj, "hh:mm a")}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                </View>
+
+                                <View style={styles.cardFooter}>
+                                    <Text style={styles.priceText}>${item.valorPagado}</Text>
+                                    <TouchableOpacity style={styles.payButton} activeOpacity={0.8}>
+                                        <Text style={styles.payButtonText}>Pagar Ahora</Text>
+                                    </TouchableOpacity>
                                 </View>
                             </View>
-
-                            <View style={styles.detailItem}>
-                                <Ionicons name="time-outline" size={14} color={themeColors.tabIconDefault} />
-                                <View style={styles.detailTextGroup}>
-                                    <Text style={styles.detailLabel}>HORA</Text>
-                                    <Text style={styles.detailValue}>{item.time}</Text>
-                                </View>
-                            </View>
-                        </View>
-
-                        <View style={styles.cardFooter}>
-                            <Text style={styles.priceText}>${item.price}</Text>
-                            <TouchableOpacity style={styles.payButton} activeOpacity={0.8}>
-                                <Text style={styles.payButtonText}>Pagar Ahora</Text>
-                            </TouchableOpacity>
-                        </View>
-
+                        );
+                    })
+                ) : (
+                    <View style={styles.emptyContainer}>
+                        <Text style={styles.emptyText}>No tienes citas programadas.</Text>
                     </View>
-                ))}
+                )}
+                
+                <View style={{ height: 40 }} />
 
             </ScrollView>
         </SafeAreaView>
@@ -228,4 +251,13 @@ const createStyles = (themeColors: any) => StyleSheet.create({
         fontSize: 12,
         color: themeColors.background,
     },
+    emptyContainer: {
+        alignItems: 'center',
+        marginTop: 100
+    },
+    emptyText: {
+        fontFamily: 'Inter',
+        color: themeColors.tabIconDefault,
+        fontSize: 16
+    }
 });
