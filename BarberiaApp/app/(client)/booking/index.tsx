@@ -7,12 +7,7 @@ import { CustomButton } from '@/components/CustomButton';
 import { MainHeader } from '@/components/MainHeader';
 import { router, useRouter } from 'expo-router';
 import { useService } from '@/context/ServiceContext';
-
-const BARBERS = [
-    { id: '1', name: 'JULIAN V.', role: 'SENIOR MASTER BARBER', quote: '"Precision is the only standard."', tags: ['RAZOR FADES', 'CONTOURING'], image: 'https://images.unsplash.com/photo-1503443207922-dff7d543fd0e?q=80&w=200' },
-    { id: '2', name: 'MARCUS T.', role: 'BEARD ARCHITECT', quote: '"Sculpting character, not just hair."', tags: ['BEARD SCULPT', 'HOT TOWEL'], image: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?q=80&w=200' },
-    { id: '3', name: 'ELIAS R.', role: 'FOUNDING BARBER & CREATIVE DIRECTOR', quote: '"The ritual is the foundation of the man."', tags: ['TRADITIONAL', 'SIGNATURE'], image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200' },
-];
+import { useBarber } from '@/context/BarberContext';
 
 export default function BookingScreen() {
     const router = useRouter();
@@ -21,18 +16,22 @@ export default function BookingScreen() {
     const styles = createStyles(themeColors);
     const [selectedBarber, setSelectedBarber] = useState('2');
     const [selectedService, setSelectedService] = useState<string | null>(null);
-    const { servicios, loading } = useService();
+    const { servicios, loading: loadingServicios } = useService();
+    const { barberos, loading: loadingBarberos } = useBarber();
 
-    // Sincronizar selección inicial cuando los servicios carguen
+    // Sincronizar selección inicial cuando los servicios y barberos carguen
     useEffect(() => {
         if (servicios.length > 0 && !selectedService) {
             setSelectedService(servicios[0].id);
         }
-    }, [servicios]);
+         if (barberos.length > 0 && !selectedBarber) {
+            setSelectedBarber(barberos[0].id);
+        }
+    }, [servicios, barberos]);
 
-    // Búsqueda en los datos del contexto cargado
+    // Búsqueda en los datos de los contextos cargados
     const currentService = servicios.find(s => s.id === selectedService);
-    const currentBarber = BARBERS.find(b => b.id === selectedBarber);
+    const currentBarber = barberos.find(b => b.id === selectedBarber);
 
     return (
         <SafeAreaView style={styles.container}>
@@ -47,37 +46,43 @@ export default function BookingScreen() {
                     <Text style={styles.sectionTitle}>Selecciona tu barbero</Text>
                 </View>
 
-                {BARBERS.map((barber) => (
-                    <TouchableOpacity
-                        key={barber.id}
-                        onPress={() => setSelectedBarber(barber.id)}
-                        style={[styles.barberCard, selectedBarber === barber.id && styles.activeCard]}
-                    >
-                        <Image source={{ uri: barber.image }} style={styles.barberImage} />
-                        <View style={styles.barberInfo}>
-                            <View style={styles.nameRow}>
-                                <Text style={styles.barberName}>{barber.name}</Text>
-                                {selectedBarber === barber.id && (
-                                    <Ionicons name="checkmark-circle" size={20} color={themeColors.tint} />
-                                )}
+                {loadingBarberos ? (
+                    <ActivityIndicator color={themeColors.tint} style={{ marginVertical: 20 }} />
+                ) : (
+                    barberos.map((barber) => (
+                        <TouchableOpacity
+                            key={barber.id}
+                            onPress={() => setSelectedBarber(barber.id)}
+                            style={[styles.barberCard, selectedBarber === barber.id && styles.activeCard]}
+                        >
+                            <Image 
+                                source={{ uri: barber.imagenPerfil || 'https://via.placeholder.com/100x120/1B1C1C/D4AF37?text=Barber' }} 
+                                style={styles.barberImage} 
+                            />
+                            <View style={styles.barberInfo}>
+                                <View style={styles.nameRow}>
+                                    <Text style={styles.barberName}>{barber.nombre} {barber.apellido}</Text>
+                                    {selectedBarber === barber.id && (
+                                        <Ionicons name="checkmark-circle" size={20} color={themeColors.tint} />
+                                    )}
+                                </View>
+                                <Text style={styles.barberRole}>MASTER BARBER</Text>
+                                <Text style={styles.barberQuote}>"Especialista en cortes clásicos y modernos."</Text>
+                                <View style={styles.tagRow}>
+                                    <View style={styles.tag}><Text style={styles.tagText}>CORTES</Text></View>
+                                    <View style={styles.tag}><Text style={styles.tagText}>BARBA</Text></View>
+                                </View>
                             </View>
-                            <Text style={styles.barberRole}>{barber.role}</Text>
-                            <Text style={styles.barberQuote}>{barber.quote}</Text>
-                            <View style={styles.tagRow}>
-                                {barber.tags.map(tag => (
-                                    <View key={tag} style={styles.tag}><Text style={styles.tagText}>{tag}</Text></View>
-                                ))}
-                            </View>
-                        </View>
-                    </TouchableOpacity>
-                ))}
+                        </TouchableOpacity>
+                    ))
+                )}
 
                 <View style={[styles.sectionHeader, { marginTop: 40 }]}>
                     <Text style={styles.sectionTitle}>Servicios</Text>
                 </View>
 
                 <View style={styles.servicesList}>
-                    {loading ? (
+                    {loadingServicios ? (
                         <View style={{ padding: 40 }}>
                             <ActivityIndicator color={themeColors.tint} />
                             <Text style={[styles.summaryText, { textAlign: 'center', marginTop: 10 }]}>Cargando rituales...</Text>
@@ -114,11 +119,21 @@ export default function BookingScreen() {
                         </Text>
                     </View>
                     <View style={{ alignItems: 'flex-end' }}>
-                        <Text style={styles.summaryText}>SELECCIONADO: {currentBarber?.name}</Text>
-                        <Text style={styles.summaryText}>{currentBarber?.name.toUpperCase()}</Text>
+                        <Text style={styles.summaryText}>SELECCIONADO: {currentBarber?.nombre}</Text>
+                        <Text style={styles.summaryText}>{currentBarber?.nombre.toUpperCase()}</Text>
                     </View>
                 </View>
-                <CustomButton title="Continue to Booking" onPress={() => router.push('/booking/calendar')} />
+                <CustomButton 
+                    title="Continuar a la agenda" 
+                    onPress={() => router.push({
+                        pathname: '/booking/calendar',
+                        params: {
+                            serviceId: selectedService,
+                            barberId: selectedBarber
+                        }
+                    })} 
+                    disabled={!selectedBarber || !selectedService}
+                    />
             </View>
         </SafeAreaView>
     );
