@@ -5,6 +5,7 @@ import { View, ActivityIndicator } from 'react-native';
 import { useFonts, NotoSerif_400Regular, NotoSerif_700Bold } from '@expo-google-fonts/noto-serif';
 import { Inter_400Regular, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
 import { AuthProvider, useAuth } from '../context/AuthContext';
+import { ServiceProvider } from '@/context/ServiceContext';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -83,7 +84,9 @@ function RootLayoutNav() {
 export default function RootLayout() {
     return (
         <AuthProvider>
-            <RootLayoutNav />
+            <ServiceProvider>
+                <RootLayoutNav />
+            </ServiceProvider>
         </AuthProvider>
     );
 }
