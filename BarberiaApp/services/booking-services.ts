@@ -96,5 +96,28 @@ export const bookingService = {
 
         if (error) throw error;
         return data;
+    },
+
+    async getHistoryBookings(clienteId: string) {
+        const { data, error } = await supabase
+            .from('Reserva')
+            .select(`
+                id,
+                fechaHoraInicio,
+                valorPagado,
+                Servicio (nombre),
+                barbero:Perfil!barberoId (nombre, apellido),
+                EstadoReserva!inner(codigo, nombre)
+            `)
+            .eq('clienteId', clienteId)
+            .neq('EstadoReserva.codigo', 'CONF') 
+            .order('fechaHoraInicio', { ascending: false }); 
+
+        if (error) {
+            console.error("Error al obtener historial:", error.message);
+            throw error;
+        }
+
+        return data;
     }
 };

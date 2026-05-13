@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, useColorScheme } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import Colors from '@/constants/Colors';
 import { logout } from '@/services/auth-services';
 import { ConfirmModal } from './ConfirmModal';
+import { supabase } from '@/supabaseClient';
+import { useAuth } from '@/context/AuthContext';
 
 interface Props {
     title?: string;
@@ -16,6 +18,27 @@ export const MainHeader = ({ title = "THE RITUAL" }: Props) => {
     const themeColors = Colors[colorScheme];
     const styles = createStyles(themeColors);
     const [modalVisible, setModalVisible] = useState(false);
+    const { authState } = useAuth();
+
+    const [userImage, setUserImage] = useState<string | null>(null);
+
+    useEffect(() => {
+        const fetchUserImage = async () => {
+            if (authState.userId) {
+                const { data, error } = await supabase
+                    .from('Perfil')
+                    .select('imagenPerfil')
+                    .eq('id', authState.userId)
+                    .single();
+
+                if (!error && data?.imagenPerfil) {
+                    setUserImage(data.imagenPerfil);
+                }
+            }
+        };
+
+        fetchUserImage();
+    }, [authState.userId]);
 
     const handleLogout = async () => {
         try {
@@ -28,10 +51,16 @@ export const MainHeader = ({ title = "THE RITUAL" }: Props) => {
 
     return (
         <View style={styles.header}>
-            <Image
-                source={{ uri: 'https://randomuser.me/api/portraits/men/32.jpg' }}
-                style={styles.userAvatar}
-            />
+            {userImage ? (
+                <Image
+                    source={{ uri: userImage }}
+                    style={styles.userAvatar}
+                />
+            ) : (
+                <View style={[styles.userAvatar, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#1B1C1C' }]}>
+                    <Ionicons name="person" size={20} color={themeColors.tint} />
+                </View>
+            )}
 
             <Text style={styles.brandLogo}>{title}</Text>
 
