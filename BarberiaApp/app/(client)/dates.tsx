@@ -9,6 +9,8 @@ import { bookingService } from '@/services/booking-services';
 import { format } from 'date-fns/format';
 import { es } from 'date-fns/locale';
 import { useLocalSearchParams } from 'expo-router';
+import { ConfirmModal } from '@/components/ConfirmModal';
+import { InfoModal } from '@/components/InfoModal';
 
 export default function AppointmentsScreen() {
     const colorScheme = useColorScheme() ?? 'light';
@@ -21,27 +23,102 @@ export default function AppointmentsScreen() {
 
     const { refresh } = useLocalSearchParams();
 
-    useEffect(() => {
-        const fetchMyBookings = async () => {
-            if (!authState.userId) return;
-            try {
-                setLoading(true);
-                const data = await bookingService.getClientBookings(authState.userId);
-                setBookings(data);
-            } catch (error) {
-                console.error(error);
-            } finally {
-                setLoading(false);
-            }
-        };
+    const [confirmModal, setConfirmModal] = useState({
+        visible: false,
+        title: '',
+        description: '',
+        actionType: '' as 'PAY' | 'CANCEL' | '',
+        appointmentId: ''
+    });
 
+    const [infoModal, setInfoModal] = useState({ visible: false, title: '', message: '' });
+    const [isProcessing, setIsProcessing] = useState(false);
+
+    const requestCancel = (id: string) => {
+        setConfirmModal({
+            visible: true,
+            title: 'Cancelar Ritual',
+            description: '¿Estás seguro de que deseas cancelar esta cita? El espacio quedará disponible para otros clientes.',
+            actionType: 'CANCEL',
+            appointmentId: id
+        });
+    };
+
+    const requestPayment = (id: string) => {
+        setConfirmModal({
+            visible: true,
+            title: 'Confirmar Pago',
+            description: '¿Deseas proceder con el pago de este servicio?',
+            actionType: 'PAY',
+            appointmentId: id
+        });
+    };
+
+    const fetchMyBookings = async () => {
+        if (!authState.userId) return;
+        try {
+            setLoading(true);
+            const data = await bookingService.getClientBookings(authState.userId);
+            setBookings(data);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
         fetchMyBookings();
     }, [authState.userId, refresh]);
+
+    const handleExecuteAction = async () => {
+        const { actionType, appointmentId } = confirmModal;
+        setConfirmModal(prev => ({ ...prev, visible: false }));
+        try {
+            setIsProcessing(true);
+
+            if (actionType === 'PAY') {
+                await bookingService.updateBookingStatus(appointmentId, 'COMP');
+                await fetchMyBookings();
+                setInfoModal({
+                    visible: true,
+                    title: 'Pago Exitoso',
+                    message: 'El ritual ha sido pagado correctamente. ¡Te esperamos en el santuario!'
+                });
+            }
+
+            else if (actionType === 'CANCEL') {
+                await bookingService.updateBookingStatus(appointmentId, 'CANC');
+                await fetchMyBookings();
+                setInfoModal({
+                    visible: true,
+                    title: 'Cita Cancelada',
+                    message: 'La reserva ha sido liberada exitosamente.'
+                });
+            }
+
+        } catch (error: any) {
+            setInfoModal({
+                visible: true,
+                title: 'Error',
+                message: 'No se pudo procesar la solicitud: ' + error.message
+            });
+        } finally {
+            setIsProcessing(false);
+        }
+    };
 
     return (
         <SafeAreaView style={styles.container}>
 
             <MainHeader />
+
+            {isProcessing && (
+                <View style={styles.loadingOverlay}>
+                    <ActivityIndicator size="large" color={themeColors.tint} />
+                    <Text style={{ color: 'white', marginTop: 10 }}>Procesando Ritual...</Text>
+                </View>
+            )}
 
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 <View style={styles.titleContainer}>
@@ -54,7 +131,7 @@ export default function AppointmentsScreen() {
                 ) : bookings.length > 0 ? (
                     bookings.map((item) => {
                         const dateObj = new Date(item.fechaHoraInicio);
-                        
+
                         return (
                             <View key={item.id} style={styles.card}>
                                 <View style={styles.cardHeader}>
@@ -99,9 +176,19 @@ export default function AppointmentsScreen() {
 
                                 <View style={styles.cardFooter}>
                                     <Text style={styles.priceText}>${item.valorPagado}</Text>
-                                    <TouchableOpacity style={styles.payButton} activeOpacity={0.8}>
-                                        <Text style={styles.payButtonText}>Pagar Ahora</Text>
-                                    </TouchableOpacity>
+                                    <View style={styles.footerActions}>
+                                        <TouchableOpacity style={styles.payButton} activeOpacity={0.8} onPress={() => requestPayment(item.id)}>
+                                            <Text style={styles.payButtonText}>Pagar Ahora</Text>
+                                        </TouchableOpacity>
+
+                                        <TouchableOpacity
+                                            style={styles.cancelButton}
+                                            activeOpacity={0.7}
+                                            onPress={() => requestCancel(item.id)}
+                                        >
+                                            <Text style={styles.cancelButtonText}>Cancelar Cita</Text>
+                                        </TouchableOpacity>
+                                    </View>
                                 </View>
                             </View>
                         );
@@ -111,10 +198,23 @@ export default function AppointmentsScreen() {
                         <Text style={styles.emptyText}>No tienes citas programadas.</Text>
                     </View>
                 )}
-                
+
                 <View style={{ height: 40 }} />
 
             </ScrollView>
+            <ConfirmModal
+                visible={confirmModal.visible}
+                title={confirmModal.title}
+                description={confirmModal.description}
+                onConfirm={handleExecuteAction}
+                onCancel={() => setConfirmModal(prev => ({ ...prev, visible: false }))}
+            />
+            <InfoModal
+                visible={infoModal.visible}
+                title={infoModal.title}
+                message={infoModal.message}
+                onClose={() => setInfoModal(prev => ({ ...prev, visible: false }))}
+            />
         </SafeAreaView>
     );
 }
@@ -234,17 +334,22 @@ const createStyles = (themeColors: any) => StyleSheet.create({
     cardFooter: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'center',
+        alignItems: 'flex-end',
+        marginTop: 10,
     },
     priceText: {
         fontFamily: 'Serif',
         fontSize: 24,
         color: themeColors.tint,
+        marginBottom: 5
     },
     payButton: {
         backgroundColor: themeColors.tint,
-        paddingHorizontal: 25,
-        paddingVertical: 12,
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        borderRadius: 0,
+        width: 140,
+        alignItems: 'center',
     },
     payButtonText: {
         fontFamily: 'InterSemi',
@@ -259,5 +364,27 @@ const createStyles = (themeColors: any) => StyleSheet.create({
         fontFamily: 'Inter',
         color: themeColors.tabIconDefault,
         fontSize: 16
+    },
+    footerActions: {
+        alignItems: 'flex-end',
+        flex: 1,
+    },
+    cancelButton: {
+        marginTop: 12,
+        paddingVertical: 4,
+    },
+    cancelButtonText: {
+        fontFamily: 'InterSemi',
+        fontSize: 12,
+        color: themeColors.error,
+        textDecorationLine: 'underline',
+        letterSpacing: 0.5,
+    },
+    loadingOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0,0,0,0.8)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 999,
     }
 });

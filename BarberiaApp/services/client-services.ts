@@ -49,6 +49,7 @@ export const CreateUser = async (user: Perfil) => {
         throw error;
     }
 }
+
 export const getClients = async (): Promise<Perfil[]> => {
     const {data, error } = await supabase.from('Perfil').select('*').eq('rolId', 1).order('id', { ascending: true });
     if (error) throw error;

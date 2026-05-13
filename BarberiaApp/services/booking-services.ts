@@ -85,5 +85,16 @@ export const bookingService = {
         }
 
         return data;
+    },
+
+    async updateBookingStatus(bookingId: string, statusCode: string) {
+        const statusId = await this.getStatusIdByCode(statusCode);
+        const { data, error } = await supabase
+            .from('Reserva')
+            .update({ estadoId: statusId })
+            .eq('id', bookingId);
+
+        if (error) throw error;
+        return data;
     }
 };
