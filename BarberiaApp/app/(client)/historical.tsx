@@ -1,33 +1,40 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, useColorScheme } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, useColorScheme, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { MainHeader } from '@/components/MainHeader';
 import Colors from '@/constants/Colors';
-
-const PAST_EXPERIENCES = [
-    {
-        id: '1',
-        service: 'The Executive Cut',
-        barber: 'Julian Vance',
-        date: 'Sep 12, 2023',
-        price: '85.00',
-        icon: 'checkmark-circle-outline'
-    },
-    {
-        id: '2',
-        service: 'Quick Trim',
-        barber: 'Julian Vance',
-        date: 'Aug 05, 2023',
-        price: '35.00',
-        icon: 'time-outline'
-    }
-];
+import { useAuth } from '@/context/AuthContext';
+import { bookingService } from '@/services/booking-services';
+import { format } from 'date-fns/format';
+import { es } from 'date-fns/locale';
 
 export default function ProfileScreen() {
     const colorScheme = useColorScheme() ?? 'light';
     const themeColors = Colors[colorScheme];
     const styles = createStyles(themeColors);
+
+    const { authState } = useAuth();
+
+    const [history, setHistory] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    const fetchHistory = async () => {
+        if (!authState.userId) return;
+        try {
+            setLoading(true);
+            const data = await bookingService.getHistoryBookings(authState.userId);
+            setHistory(data);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchHistory();
+    }, [authState.userId]);
 
     return (
         <SafeAreaView style={styles.container}>
@@ -39,30 +46,60 @@ export default function ProfileScreen() {
                     <Text style={styles.sectionTitle}>Experiencias Pasadas</Text>
                 </View>
 
-                {PAST_EXPERIENCES.map((item) => (
-                    <View key={item.id} style={styles.historyCard}>
+                {loading ? (
+                    <ActivityIndicator size="large" color={themeColors.tint} style={{ marginTop: 50 }} />
+                ) : history.length > 0 ? (
+                    history.map((item) => {
+                        const dateObj = new Date(item.fechaHoraInicio);
+                        const isCancelled = item.EstadoReserva.codigo === 'CANC';
 
-                        <View style={styles.cardTop}>
-                            <View style={styles.historyIconContainer}>
-                                <Ionicons name={item.icon as any} size={20} color={themeColors.tabIconDefault} />
-                            </View>
-                            <View style={styles.historyInfo}>
-                                <Text style={styles.historyServiceName}>{item.service}</Text>
-                                <Text style={styles.historyMeta}>
-                                    {item.barber}  •  {item.date}
-                                </Text>
-                            </View>
-                        </View>
+                        return (
+                            <View key={item.id} style={[styles.historyCard, isCancelled && { opacity: 0.7 }]}>
 
-                        <View style={styles.cardBottom}>
-                            <View>
-                                <Text style={styles.amountPaidLabel}>CANTIDAD PAGADA</Text>
-                                <Text style={styles.historyPrice}>${item.price}</Text>
-                            </View>
-                        </View>
+                                <View style={styles.cardTop}>
+                                    <View style={styles.historyIconContainer}>
+                                        <Ionicons
+                                            name={isCancelled ? "close-circle-outline" : "checkmark-circle-outline"}
+                                            size={20}
+                                            color={isCancelled ? themeColors.error : themeColors.tabIconDefault}
+                                        />
+                                    </View>
+                                    <View style={styles.historyInfo}>
+                                        <Text style={styles.historyServiceName}>
+                                            {item.Servicio?.nombre}
+                                            {isCancelled && <Text style={{ color: themeColors.error, fontSize: 10 }}> (CANCELADA)</Text>}
+                                        </Text>
+                                        <Text style={styles.historyMeta}>
+                                            {item.barbero?.nombre}  •  {format(dateObj, "dd MMM, yyyy", { locale: es })}
+                                        </Text>
+                                    </View>
+                                </View>
 
+                                <View style={styles.cardBottom}>
+                                    <View>
+                                        <Text style={styles.amountPaidLabel}>
+                                            {isCancelled ? "VALOR PERDIDO" : "CANTIDAD PAGADA"}
+                                        </Text>
+                                        <Text style={[styles.historyPrice, isCancelled && { textDecorationLine: 'line-through' }]}>
+                                            ${item.valorPagado}
+                                        </Text>
+                                    </View>
+
+                                    <View style={[styles.statusTag, { borderColor: isCancelled ? themeColors.error : '#333' }]}>
+                                        <Text style={[styles.statusTagText, { color: isCancelled ? themeColors.error : themeColors.tabIconDefault }]}>
+                                            {item.EstadoReserva.nombre.toUpperCase()}
+                                        </Text>
+                                    </View>
+                                </View>
+
+                            </View>
+                        );
+                    })
+                ) : (
+                    <View style={styles.emptyContainer}>
+                        <Text style={styles.emptyText}>Aún no tienes un historial de rituales.</Text>
                     </View>
-                ))}
+                )}
 
             </ScrollView>
         </SafeAreaView>
@@ -142,5 +179,24 @@ const createStyles = (themeColors: any) => StyleSheet.create({
         fontSize: 20,
         color: themeColors.text,
         marginTop: 2,
+    },
+    statusTag: { 
+        borderWidth: 1, 
+        paddingHorizontal: 8, 
+        paddingVertical: 4 
+    },
+    statusTagText: { 
+        fontFamily: 'InterBold', 
+        fontSize: 8, 
+        letterSpacing: 1 
+    },
+    emptyContainer: { 
+        alignItems: 'center', 
+        marginTop: 100 
+    },
+    emptyText: { 
+        fontFamily: 'Inter', 
+        color: themeColors.tabIconDefault, 
+        fontSize: 16 
     }
 });
