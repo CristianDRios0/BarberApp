@@ -1,23 +1,109 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Switch, TouchableOpacity, Image, useColorScheme } from 'react-native';
+import React, { useState, useEffect, useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity, useColorScheme, ActivityIndicator, Modal, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { MainHeader } from '@/components/MainHeader';
 import { CustomButton } from '@/components/CustomButton';
 import Colors from '@/constants/Colors';
 import { CustomSwitch } from '@/components/CustomSwitch';
+import { useAuth } from '@/context/AuthContext';
+import { barberService } from '@/services/barberService'; 
+import { dayMap } from '@/utils/dateMapper';
+
+const INITIAL_SCHEDULE =[
+    { id: '1', day: 'Monday', active: false, start: '09:00 AM', end: '06:00 PM' },
+    { id: '2', day: 'Tuesday', active: false, start: '09:00 AM', end: '06:00 PM' },
+    { id: '3', day: 'Wednesday', active: false, start: '09:00 AM', end: '06:00 PM' },
+    { id: '4', day: 'Thursday', active: false, start: '09:00 AM', end: '06:00 PM' },
+    { id: '5', day: 'Friday', active: false, start: '09:00 AM', end: '06:00 PM' },
+    { id: '6', day: 'Saturday', active: false, start: '09:00 AM', end: '06:00 PM' },
+    { id: '0', day: 'Sunday', active: false, start: '09:00 AM', end: '06:00 PM' },
+];
+
+const formatTo12H = (time24h: string) => {
+    let [hours, minutes] = time24h.split(':');
+    let h = parseInt(hours, 10);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return `${h.toString().padStart(2, '0')}:${minutes} ${ampm}`;
+};
+
+// Generador de horas para el Picker (de 06:00 AM a 10:00 PM)
+const generateTimeOptions = () => {
+    const times =[];
+    for (let i = 6; i <= 22; i++) {
+        const ampm = i >= 12 ? 'PM' : 'AM';
+        let h = i % 12 || 12;
+        const hrStr = h.toString().padStart(2, '0');
+        times.push(`${hrStr}:00 ${ampm}`);
+        times.push(`${hrStr}:30 ${ampm}`);
+    }
+    return times;
+};
 
 export default function AvailabilityScreen() {
-    const colorScheme = useColorScheme() ?? 'light';
+    const colorScheme = useColorScheme() ?? 'dark';
     const themeColors = Colors[colorScheme];
     const styles = createStyles(themeColors);
 
-    const [schedule, setSchedule] = useState([
-        { id: '1', day: 'Monday', active: true, start: '09:00 AM', end: '06:00 PM' },
-        { id: '2', day: 'Tuesday', active: true, start: '09:00 AM', end: '06:00 PM' },
-        { id: '3', day: 'Wednesday', active: true, start: '10:00 AM', end: '07:00 PM' },
-        { id: '4', day: 'Sunday', active: false, start: '-', end: '-', label: 'Day Off' },
-    ]);
+    const { authState } = useAuth();
+    const [schedule, setSchedule] = useState(INITIAL_SCHEDULE);
+    const [loadingSchedule, setLoadingSchedule] = useState(false);
+    
+    // Estado para el Modal Selector de Horas
+    const [pickerVisible, setPickerVisible] = useState(false);
+    const [activeSelection, setActiveSelection] = useState<{ id: string, type: 'start' | 'end' } | null>(null);
+
+    useEffect(() => {
+        const loadInitialData = async () => {
+            if (!authState.userId) return;
+            try {
+                setLoadingSchedule(true);
+                const dbTurnos = await barberService.getWorkSchedule(authState.userId);
+                
+                if (dbTurnos && dbTurnos.length > 0) {
+                    setSchedule(prev => prev.map(item => {
+                        const dbTurno = dbTurnos.find(t => t.diaSemana === dayMap[item.day]);
+                        return dbTurno ? { 
+                            ...item, 
+                            active: true, 
+                            start: formatTo12H(dbTurno.horaInicio), 
+                            end: formatTo12H(dbTurno.horaFin) 
+                        } : item;
+                    }));
+                }
+            } catch (error) {
+                console.error("Error cargando agenda:", error);
+            } finally {
+                setLoadingSchedule(false);
+            }
+        };
+        loadInitialData();
+    }, [authState.userId]);
+
+    const stats = useMemo(() => {
+        let totalH = 0;
+        let activeDays = 0;
+        const parseTime = (timeStr: string) => {
+            if (!timeStr || timeStr === '-') return 0;
+            const [time, modifier] = timeStr.split(' ');
+            let [hours, minutes] = time.split(':').map(Number);
+            if (hours === 12 && modifier === 'AM') hours = 0;
+            if (hours !== 12 && modifier === 'PM') hours += 12;
+            return hours + (minutes / 60);
+        };
+        schedule.forEach(item => {
+            if (item.active) {
+                const diff = parseTime(item.end) - parseTime(item.start);
+                if (diff > 0) { totalH += diff; activeDays++; }
+            }
+        });
+        return {
+            total: totalH.toFixed(1),
+            avg: activeDays > 0 ? (totalH / activeDays).toFixed(1) : "0",
+            slots: Math.floor(totalH * 2) 
+        };
+    }, [schedule]);
 
     const toggleSwitch = (id: string) => {
         setSchedule(prev => prev.map(item =>
@@ -25,113 +111,134 @@ export default function AvailabilityScreen() {
         ));
     };
 
+    const handleUpdateSchedule = async () => {
+        if (!authState.userId) {
+            Alert.alert("Error", "Sesión no válida. Inicia sesión nuevamente.");
+            return;
+        }
+
+        try {
+            setLoadingSchedule(true); 
+            await barberService.upsertWorkSchedule(authState.userId, schedule);
+            Alert.alert("Ritual Actualizado", "El horario ha sido guardado correctamente.");
+        } catch (error: any) {
+            console.error("Fallo al guardar:", error);
+            Alert.alert("Error al Guardar", error.message || "Error al contactar con la base de datos.");
+        } finally {
+            setLoadingSchedule(false);
+        }
+    };
+
+    const openTimePicker = (id: string, type: 'start' | 'end') => {
+        setActiveSelection({ id, type });
+        setPickerVisible(true);
+    };
+
+    const selectTime = (time: string) => {
+        if (!activeSelection) return;
+        setSchedule(prev => prev.map(item => 
+            item.id === activeSelection.id ? { ...item, [activeSelection.type]: time } : item
+        ));
+        setPickerVisible(false);
+    };
+
     return (
         <SafeAreaView style={styles.container}>
             <MainHeader title="TURNOS" />
-
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-
-                <Text style={styles.mainTitle}>Work{"\n"}Availability</Text>
-                <Text style={styles.description}>
-                    Configure your standard weekly ritual. Set your hours of mastery and the days you are available for patrons.
-                </Text>
+                
+                <Text style={styles.mainTitle}>Horario de{"\n"}Disponibilidad</Text>
+                <Text style={styles.description}>Configura tus horas de maestría y ritual.</Text>
 
                 <View style={styles.actionButtonContainer}>
-                    <CustomButton title="UPDATE SCHEDULE" onPress={() => { }} />
+                    <CustomButton 
+                        title={loadingSchedule ? "GUARDANDO..." : "ACTUALIZAR HORARIO"} 
+                        onPress={handleUpdateSchedule} 
+                        disabled={loadingSchedule} 
+                        loading={loadingSchedule}
+                    />
                 </View>
 
+                {/* TARJETA DE HORARIOS */}
                 <View style={styles.sectionCard}>
                     <View style={styles.cardHeader}>
-                        <Text style={styles.cardTitle}>Weekly Schedule</Text>
-                        <View style={styles.standardBadge}>
-                            <Text style={styles.standardText}>STANDARD HOURS</Text>
-                        </View>
+                        <Text style={styles.cardTitle}>Agenda Semanal</Text>
                     </View>
 
                     {schedule.map((item) => (
                         <View key={item.id} style={styles.dayRow}>
-                            {/* IZQUIERDA: Switch y Nombre del día */}
                             <View style={styles.dayInfo}>
                                 <CustomSwitch value={item.active} onValueChange={() => toggleSwitch(item.id)} activeColor={themeColors.tint} inActiveColor="#333333" />
                                 <View style={{ marginLeft: 12 }}>
                                     <Text style={styles.dayName}>{item.day}</Text>
-                                    <Text style={styles.dayStatus}>{item.active ? 'AVAILABLE' : 'DAY OFF'}</Text>
+                                    <Text style={styles.dayStatus}>{item.active ? 'DISPONIBLE' : 'DESCANSO'}</Text>
                                 </View>
                             </View>
 
-
                             <View style={styles.timeColumn}>
                                 {item.active ? (
-                                    <>
-
-                                        <View style={styles.timeInputGroup}>
-                                            <Text style={styles.timeLabel}>START</Text>
-                                            <View style={styles.timeBox}>
-                                                <Text style={styles.timeValue}>{item.start}</Text>
-                                                <Ionicons name="time-outline" size={14} color={themeColors.tint} />
-                                            </View>
-                                        </View>
-
-
-                                        <View style={[styles.timeInputGroup, { marginTop: 10 }]}>
-                                            <Text style={styles.timeLabel}>END</Text>
-                                            <View style={styles.timeBox}>
-                                                <Text style={styles.timeValue}>{item.end}</Text>
-                                                <Ionicons name="time-outline" size={14} color={themeColors.tint} />
-                                            </View>
-                                        </View>
-                                    </>
+                                    <View style={styles.timeActionRow}>
+                                        <TouchableOpacity style={styles.timeBtn} onPress={() => openTimePicker(item.id, 'start')}>
+                                            <Text style={styles.timeLabel}>INICIO</Text>
+                                            <Text style={styles.timeValue}>{item.start}</Text>
+                                        </TouchableOpacity>
+                                        
+                                        <Text style={styles.timeSeparator}>-</Text>
+                                        
+                                        <TouchableOpacity style={styles.timeBtn} onPress={() => openTimePicker(item.id, 'end')}>
+                                            <Text style={styles.timeLabel}>FIN</Text>
+                                            <Text style={styles.timeValue}>{item.end}</Text>
+                                        </TouchableOpacity>
+                                    </View>
                                 ) : (
-                                    <Text style={styles.closedText}>Closed</Text>
+                                    <Text style={styles.closedText}>Cerrado</Text>
                                 )}
                             </View>
                         </View>
                     ))}
                 </View>
 
+                {/* TARJETA DE ESTADÍSTICAS */}
                 <View style={styles.sectionCard}>
                     <View style={styles.iconTitleRow}>
                         <Ionicons name="calendar" size={22} color={themeColors.tint} />
-                        <Text style={styles.cardTitleSmall}>Total Capacity</Text>
+                        <Text style={styles.cardTitleSmall}>Capacidad Total</Text>
                     </View>
-                    <Text style={styles.cardSubtitle}>Based on your current settings, you have 42 available slots this week.</Text>
-
+                    <Text style={styles.cardSubtitle}>Basado en tu configuración, tienes {stats.slots} espacios disponibles (30 min c/u).</Text>
                     <View style={styles.statRow}>
-                        <Text style={styles.statLabel}>AVG. SHIFT</Text>
-                        <Text style={styles.statValue}>9.5 Hours</Text>
+                        <Text style={styles.statLabel}>PROMEDIO DIARIO</Text>
+                        <Text style={styles.statValue}>{stats.avg} Horas</Text>
                     </View>
                     <View style={styles.statRow}>
-                        <Text style={styles.statLabel}>TOTAL HOURS</Text>
-                        <Text style={styles.statValue}>48 Hours</Text>
+                        <Text style={styles.statLabel}>TOTAL SEMANAL</Text>
+                        <Text style={styles.statValue}>{stats.total} Horas</Text>
                     </View>
-                </View>
-
-                <View style={styles.sectionCard}>
-                    <Text style={styles.labelCaps}>DAILY BREAK RITUAL</Text>
-                    <View style={styles.breakBox}>
-                        <View style={styles.rowJustified}>
-                            <Text style={styles.breakTitle}>LUNCH BREAK</Text>
-                            <Ionicons name="remove" size={20} color={themeColors.tabIconDefault} />
-                        </View>
-                        <View style={styles.breakTimeRow}>
-                            <View style={styles.timeBoxFull}>
-                                <Text style={styles.timeValue}>01:00 PM</Text>
-                                <Ionicons name="time-outline" size={14} color={themeColors.tint} />
-                            </View>
-                            <Text style={styles.toText}>to</Text>
-                            <View style={styles.timeBoxFull}>
-                                <Text style={styles.timeValue}>02:00 PM</Text>
-                                <Ionicons name="time-outline" size={14} color={themeColors.tint} />
-                            </View>
-                        </View>
-                    </View>
-                    <TouchableOpacity style={styles.addBreakBtn}>
-                        <Text style={styles.addBreakText}>+ ADD CUSTOM BREAK</Text>
-                    </TouchableOpacity>
                 </View>
 
                 <View style={{ height: 40 }} />
             </ScrollView>
+
+            {/* MODAL DE SELECCIÓN DE HORA */}
+            <Modal visible={pickerVisible} animationType="slide" transparent={true}>
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <Text style={styles.modalTitle}>Selecciona la Hora</Text>
+                        <FlatList
+                            data={generateTimeOptions()}
+                            keyExtractor={(item) => item}
+                            renderItem={({ item }) => (
+                                <TouchableOpacity style={styles.modalItem} onPress={() => selectTime(item)}>
+                                    <Text style={styles.modalItemText}>{item}</Text>
+                                </TouchableOpacity>
+                            )}
+                            showsVerticalScrollIndicator={false}
+                        />
+                        <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setPickerVisible(false)}>
+                            <Text style={styles.modalCloseText}>CANCELAR</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 }
@@ -145,41 +252,28 @@ const createStyles = (themeColors: any) => StyleSheet.create({
     sectionCard: { backgroundColor: '#1B1C1C', padding: 20, marginBottom: 20, borderTopWidth: 2, borderTopColor: themeColors.tint },
     cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25 },
     cardTitle: { fontFamily: 'Serif', fontSize: 24, color: themeColors.text },
-    standardBadge: { backgroundColor: '#252525', paddingHorizontal: 10, paddingVertical: 5 },
-    standardText: { fontFamily: 'InterBold', fontSize: 10, color: themeColors.tint, letterSpacing: 1 },
-    dayRow: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 20, borderBottomWidth: 1, borderBottomColor: '#2A2A2A' },
-    dayInfo: { flex: 1, flexDirection: 'row', alignItems: 'center', marginTop: 10 },
+    dayRow: { flexDirection: 'column', paddingVertical: 20, borderBottomWidth: 1, borderBottomColor: '#2A2A2A', gap: 15 },
+    dayInfo: { flexDirection: 'row', alignItems: 'center' },
     dayName: { fontFamily: 'InterSemi', fontSize: 16, color: themeColors.text },
     dayStatus: { fontFamily: 'Inter', fontSize: 11, color: themeColors.tabIconDefault },
-    timeColumn: { flex: 1, alignItems: 'flex-end' },
-    timeInputGroup: { width: 110 },
-    timeLabel: { fontFamily: 'InterBold', fontSize: 9, color: themeColors.tabIconDefault, marginBottom: 4, textAlign: 'right', marginRight: 5 },
-    timeBox: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        backgroundColor: '#131313',
-        paddingHorizontal: 10,
-        paddingVertical: 10,
-        borderWidth: 1,
-        borderColor: '#333',
-    },
-    timeValue: { fontFamily: 'InterSemi', fontSize: 12, color: '#FFF' },
-    closedText: { fontFamily: 'Serif', fontSize: 18, color: '#444', fontStyle: 'italic', marginTop: 15 },
+    timeColumn: { width: '100%', alignItems: 'center' },
+    timeActionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', backgroundColor: '#131313', padding: 5, borderRadius: 5, borderWidth: 1, borderColor: '#333' },
+    timeBtn: { flex: 1, paddingVertical: 10, alignItems: 'center' },
+    timeLabel: { fontFamily: 'InterBold', fontSize: 9, color: themeColors.tabIconDefault, marginBottom: 4 },
+    timeValue: { fontFamily: 'InterSemi', fontSize: 14, color: '#FFF' },
+    timeSeparator: { color: themeColors.tint, fontSize: 18, marginHorizontal: 10 },
+    closedText: { fontFamily: 'Serif', fontSize: 18, color: '#444', fontStyle: 'italic' },
     iconTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
     cardTitleSmall: { fontFamily: 'Serif', fontSize: 22, color: themeColors.text },
     cardSubtitle: { fontFamily: 'Inter', fontSize: 13, color: themeColors.tabIconDefault, marginBottom: 20 },
     statRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 12, borderTopWidth: 1, borderTopColor: '#2A2A2A' },
     statLabel: { fontFamily: 'InterSemi', fontSize: 12, color: themeColors.tabIconDefault },
     statValue: { fontFamily: 'InterBold', fontSize: 16, color: themeColors.tint },
-    labelCaps: { fontFamily: 'InterBold', fontSize: 11, color: themeColors.tint, letterSpacing: 1, marginBottom: 15 },
-    breakBox: { backgroundColor: '#131313', padding: 15, borderWidth: 1, borderColor: '#333' },
-    rowJustified: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 },
-    breakTitle: { fontFamily: 'InterBold', fontSize: 13, color: '#FFF' },
-    breakTimeRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-    timeBoxFull: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#1B1C1C', padding: 10, borderWidth: 1, borderColor: '#333' },
-    toText: { color: themeColors.tabIconDefault, fontFamily: 'Inter' },
-    addBreakBtn: { marginTop: 15, padding: 15, borderStyle: 'dashed', borderWidth: 1, borderColor: '#444', alignItems: 'center' },
-    addBreakText: { fontFamily: 'InterSemi', fontSize: 11, color: themeColors.tabIconDefault },
-
+    modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.8)' },
+    modalContent: { backgroundColor: '#1B1C1C', height: '60%', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, borderTopWidth: 2, borderColor: themeColors.tint },
+    modalTitle: { fontFamily: 'Serif', fontSize: 22, color: '#FFF', textAlign: 'center', marginBottom: 20 },
+    modalItem: { paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#333' },
+    modalItemText: { fontFamily: 'InterSemi', fontSize: 18, color: '#FFF', textAlign: 'center' },
+    modalCloseBtn: { marginTop: 20, paddingVertical: 15, backgroundColor: themeColors.tint, borderRadius: 5 },
+    modalCloseText: { fontFamily: 'InterBold', fontSize: 14, color: '#131313', textAlign: 'center' },
 });
