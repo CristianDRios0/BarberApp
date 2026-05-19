@@ -39,6 +39,7 @@ export default function StaffScreen() {
         try {
             if (selectedBarber) {
                 await updateBarber(selectedBarber.id, formData);
+                setModalVisible(false);
                 setInfoConfig({
                     visible: true,
                     title: "Actualizado",
@@ -46,15 +47,16 @@ export default function StaffScreen() {
                 });
             } else {
                 await CreateUser(formData as Perfil);
-                await refreshBarbers();
+                setModalVisible(false);
                 setInfoConfig({
                     visible: true,
                     title: "Registro Exitoso",
                     message: "El barbero ha sido creado. Ya puede acceder con su correo."
                 });
             }
-            setModalVisible(false);
+            refreshBarbers();
         } catch (error: any) {
+            setModalVisible(false);
             setInfoConfig({
                 visible: true,
                 title: "Atención",
@@ -81,7 +83,7 @@ export default function StaffScreen() {
             setInfoConfig({
                 visible: true,
                 title: "Eliminado",
-                message: `El artesano ${name} ha sido removido del sistema.`
+                message: `El Barbero ${name} ha sido removido del sistema.`
             });
         } catch (error) {
             setInfoConfig({
@@ -101,7 +103,7 @@ export default function StaffScreen() {
                 keyExtractor={(item) => item.id}
                 ListHeaderComponent={() => (
                     <View style={styles.headerSection}>
-                        <Text style={styles.stepLabel}>GESTIÓN INTERNA</Text>
+                        <Text style={styles.stepLabel}>Configuración de Barberos</Text>
 
                         <View style={styles.titleRow}>
                             <View>
