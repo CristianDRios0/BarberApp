@@ -17,6 +17,36 @@ interface Props {
 export const BarberFormModal = ({ visible, onClose, onSubmit, initialData }: Props) => {
   const colorScheme = useColorScheme() ?? 'light';
   const themeColors = Colors[colorScheme];
+  const [errors, setErrors] = useState<any>({});
+  const [loading, setLoading] = useState(false);
+
+  const regex = {
+    email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+    phone: /^[0-9]{7,15}$/,
+    text: /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]{2,50}$/, 
+    document: /^[0-9]{6,12}$/,
+  }
+  
+  const validateForm = () => {
+    let newError: any = {};
+    if (!form.nombre || !regex.text.test(form.nombre)) {
+      newError.nombre = "Nombre inválido. Solo letras y espacios, 2-50 caracteres.";
+    }
+    if (!form.apellido || !regex.text.test(form.apellido)) {
+      newError.apellido = "Apellido inválido. Solo letras y espacios, 2-50 caracteres.";
+    }
+    if (!form.correo || !regex.email.test(form.correo)) {
+      newError.correo = "Correo electrónico inválido.";
+    }
+    if (!form.documento || !regex.document.test(form.documento)) {
+      newError.documento = "Documento inválido. Solo números, 6-12 dígitos.";
+    }
+    if (form.telefono && !regex.phone.test(form.telefono)) {
+      newError.telefono = "Teléfono inválido. Solo números, 7-15 dígitos.";
+    }
+    setErrors(newError);
+    return Object.keys(newError).length === 0;
+  }
 
   const [form, setForm] = useState<Partial<Perfil>>({
     nombre: '',
@@ -27,10 +57,9 @@ export const BarberFormModal = ({ visible, onClose, onSubmit, initialData }: Pro
     rolId: 2, 
   });
 
-  const [loading, setLoading] = useState(false);
-
   // Sincronizar datos cuando se abre para editar
   useEffect(() => {
+    setErrors({});
     if (initialData) {
       setForm(initialData);
     } else {
@@ -38,16 +67,23 @@ export const BarberFormModal = ({ visible, onClose, onSubmit, initialData }: Pro
     }
   }, [initialData, visible]);
 
+   // Función para manejar el cambio de texto y limpiar error de ese campo específico
+  const handleInputChange = (field: keyof Perfil, value: string) => {
+    setForm({ ...form, [field]: value });
+    if (errors[field]) {
+      setErrors({ ...errors, [field]: null }); // Quita el mensaje de error cuando el usuario escribe
+    }
+  };
+
   const handleSave = async () => {
-    // Validación básica
-    if (!form.nombre || !form.apellido || !form.correo || !form.documento) {
-      alert("Por favor, completa los campos obligatorios.");
+    if (!validateForm()){
       return;
     }
 
     setLoading(true);
     try {
       await onSubmit(form);
+      setErrors({});
       onClose();
     } catch (error) {
       console.error(error);
@@ -83,21 +119,24 @@ export const BarberFormModal = ({ visible, onClose, onSubmit, initialData }: Pro
               label="Nombre" 
               placeholder="Ej. Julian" 
               value={form.nombre ?? ''}
-              onChangeText={(v) => setForm({...form, nombre: v})}
+              error ={errors.nombre}
+              onChangeText={(v) => handleInputChange('nombre',v)}
             />
 
             <FormInput 
               label="Apellido" 
               placeholder="Ej. Vance" 
               value={form.apellido ?? ''}
-              onChangeText={(v) => setForm({...form, apellido: v})}
+              error={errors.apellido}
+              onChangeText={(v) => handleInputChange('apellido',v)}
             />
 
             <FormInput 
               label="Documento de Identidad" 
               placeholder="CC / DNI" 
               value={form.documento ?? ''}
-              onChangeText={(v) => setForm({...form, documento: v})}
+              error={errors.documento}
+              onChangeText={(v) => handleInputChange('documento',v)}
               keyboardType="numeric"
             />
 
@@ -105,7 +144,8 @@ export const BarberFormModal = ({ visible, onClose, onSubmit, initialData }: Pro
               label="Correo Electrónico" 
               placeholder="barber@theritual.com" 
               value={form.correo ?? ''}
-              onChangeText={(v) => setForm({...form, correo: v})}
+              error={errors.correo}
+              onChangeText={(v) => handleInputChange('correo',v)}
               autoCapitalize="none"
               keyboardType="email-address"
               editable={!initialData} // No permitir cambiar correo en edición para evitar conflictos con Auth
@@ -114,7 +154,8 @@ export const BarberFormModal = ({ visible, onClose, onSubmit, initialData }: Pro
               label="Teléfono" 
               placeholder= ''
               value={form.telefono ?? ''}
-              onChangeText={(v) => setForm({...form, telefono: v})}
+              error={errors.telefono}
+              onChangeText={(v) => handleInputChange('telefono',v)}
               keyboardType="phone-pad"
             />
 

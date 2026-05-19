@@ -38,9 +38,10 @@ export const updateBarber = async (id: string, updatedBarber: Partial<Perfil>): 
 }
 
 export const deleteBarber = async (id: string): Promise<void> => {
-    const {error} = await supabase.from('Perfil').delete().eq('id', id);
+    const {data, error} = await supabase.rpc('delete_barber_completely', {user_id_to_delete: id});
     if (error) {
         console.error('Error al eliminar el barbero:', error.message);
         throw error;
     }
+    return data;
 }
