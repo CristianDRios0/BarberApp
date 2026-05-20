@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, useColorScheme, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { MainHeader } from '@/components/MainHeader';
 import Colors from '@/constants/Colors';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useBarber } from '@/context/BarberContext';
 import { useService } from '@/context/ServiceContext';
 import { format, addDays, isSameDay, startOfDay, isBefore, addWeeks, subWeeks, startOfWeek, parse, addMinutes } from 'date-fns';
@@ -26,7 +26,7 @@ export default function TimeSelectionScreen() {
     const selectedBarber = barberos.find(b => b.id === barberId);
     const selectedService = servicios.find(s => s.id === serviceId);
 
-    const [selectedTime, setSelectedTime] = useState('10:00 AM');
+    const [selectedTime, setSelectedTime] = useState<string | null>(null);
     const [selectedDate, setSelectedDate] = useState<Date>(startOfDay(new Date()));
 
     const [days, setDays] = useState<any[]>([]);
@@ -51,7 +51,6 @@ export default function TimeSelectionScreen() {
                 const schedule = await barberService.getWorkSchedule(barberId);
                 // Extraemos los números de díaSemana (0-6)
                 const workingDaysIds = schedule.map(item => Number(item.diaSemana));
-                console.log("Días que trabaja el barbero (DB):", workingDaysIds);
                 setWorkingDays(workingDaysIds);
             } catch (error) {
                 console.error("Error al obtener horario del barbero:", error);
@@ -91,79 +90,81 @@ export default function TimeSelectionScreen() {
     }, [currentWeekStart, workingDays]);
 
     // Calcular intervalos de tiempo
-    useEffect(() => {
-        const calculateSlots = async () => {
-            if (!barberId) return;
+    const calculateSlots = async () => {
+        if (!barberId) return;
 
-            try {
-                setIsFetchingSlots(true);
-                const dayOfWeek = selectedDate.getDay();
+        try {
+            setIsFetchingSlots(true);
+            const dayOfWeek = selectedDate.getDay();
 
-                // Consulta el turno del barbero para este día específico
-                const { data: turnos, error } = await supabase
-                    .from('Turno')
-                    .select('horaInicio, horaFin')
-                    .eq('barberoId', barberId)
-                    .eq('diaSemana', dayOfWeek);
+            // Consulta el turno del barbero para este día específico
+            const { data: turnos, error } = await supabase
+                .from('Turno')
+                .select('horaInicio, horaFin')
+                .eq('barberoId', barberId)
+                .eq('diaSemana', dayOfWeek);
 
-                if (error || !turnos || turnos.length === 0) {
-                    setMorningSlots([]);
-                    setAfternoonSlots([]);
-                    return;
-                }
-
-                // Consulta qué horas YA están reservadas en la base de datos
-                // Usamos el servicio que creamos en el paso 1
-                const occupiedTimes = await bookingService.getOccupiedSlots(barberId, selectedDate);
-
-                const morning: any[] = [];
-                const afternoon: any[] = [];
-                const now = new Date();
-
-                // fragmentar el horario en intervalos de 30 minutos
-                turnos.forEach(turno => {
-                    let current = parse(turno.horaInicio, 'HH:mm:ss', selectedDate);
-                    const end = parse(turno.horaFin, 'HH:mm:ss', selectedDate);
-
-                    while (isBefore(current, end)) {
-                        const timeLabel = format(current, 'h:mm a').toUpperCase();
-                        const isBookedInDB = occupiedTimes.includes(timeLabel.replace(/^0/, '')); // Valida si la hora está ocupada según la DB (sin ceros a la izquierda)
-                        const isPast = isSameDay(selectedDate, now) && isBefore(current, now); // Comprobamos si la hora ya pasó (solo si el día seleccionado es HOY)
-
-                        const slot = {
-                            time: timeLabel,
-                            isBooked: isBookedInDB || isPast
-                        };
-
-                        // Clasificamos según AM o PM y se inserta en el estado correcto
-                        if (format(current, 'a') === 'AM') {
-                            morning.push(slot);
-                        } else {
-                            afternoon.push(slot);
-                        }
-
-                        // Sumamos 30 minutos al puntero
-                        current = addMinutes(current, 30);
-                    }
-                });
-
-                setMorningSlots(morning);
-                setAfternoonSlots(afternoon);
-
-                // Auto-seleccionar el primer horario libre
-                const allSlots = [...morning, ...afternoon];
-                const firstFree = allSlots.find(s => !s.isBooked);
-                if (firstFree) setSelectedTime(firstFree.time);
-
-            } catch (err) {
-                console.error("Error al calcular intervalos:", err);
-            } finally {
-                setIsFetchingSlots(false);
+            if (error || !turnos || turnos.length === 0) {
+                setMorningSlots([]);
+                setAfternoonSlots([]);
+                return;
             }
-        };
 
-        calculateSlots();
-    }, [selectedDate, barberId]); // Se dispara al cambiar el barbero o el dia seleccionado
+            // Consulta qué horas YA están reservadas en la base de datos
+            // Usamos el servicio que creamos en el paso 1
+            const occupiedTimes = await bookingService.getOccupiedSlots(barberId, selectedDate);
+
+            const morning: any[] = [];
+            const afternoon: any[] = [];
+            const now = new Date();
+
+            // fragmentar el horario en intervalos de 30 minutos
+            turnos.forEach(turno => {
+                let current = parse(turno.horaInicio, 'HH:mm:ss', selectedDate);
+                const end = parse(turno.horaFin, 'HH:mm:ss', selectedDate);
+
+                while (isBefore(current, end)) {
+                    const timeLabel = format(current, 'h:mm a').toUpperCase();
+                    const isBookedInDB = occupiedTimes.includes(timeLabel.replace(/^0/, '')); // Valida si la hora está ocupada según la DB (sin ceros a la izquierda)
+                    const isPast = isSameDay(selectedDate, now) && isBefore(current, now); // Comprobamos si la hora ya pasó (solo si el día seleccionado es HOY)
+
+                    const slot = {
+                        time: timeLabel,
+                        isBooked: isBookedInDB || isPast
+                    };
+
+                    // Clasificamos según AM o PM y se inserta en el estado correcto
+                    if (format(current, 'a') === 'AM') {
+                        morning.push(slot);
+                    } else {
+                        afternoon.push(slot);
+                    }
+
+                    // Sumamos 30 minutos al puntero
+                    current = addMinutes(current, 30);
+                }
+            });
+
+            setMorningSlots(morning);
+            setAfternoonSlots(afternoon);
+
+            // Auto-seleccionar el primer horario libre
+            const allSlots = [...morning, ...afternoon];
+            const firstFree = allSlots.find(s => !s.isBooked);
+            if (firstFree) setSelectedTime(firstFree.time);
+
+        } catch (err) {
+            console.error("Error al calcular intervalos:", err);
+        } finally {
+            setIsFetchingSlots(false);
+        }
+    };
+
+    useFocusEffect(
+        useCallback(() => {
+            calculateSlots();
+        }, [selectedDate, barberId])
+    );
 
     // Funciones de Navegación
     const handleNextWeek = () => setCurrentWeekStart(prev => addWeeks(prev, 1));
