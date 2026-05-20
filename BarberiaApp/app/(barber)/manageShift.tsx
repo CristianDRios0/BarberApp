@@ -1,23 +1,24 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity, useColorScheme, ActivityIndicator, Modal, FlatList } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useColorScheme, Modal as RNModal, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { MainHeader } from '@/components/MainHeader';
 import { CustomButton } from '@/components/CustomButton';
-import Colors from '@/constants/Colors';
 import { CustomSwitch } from '@/components/CustomSwitch';
+import { InfoModal } from '@/components/InfoModal'; // <-- Importamos tu Modal personalizado
+import Colors from '@/constants/Colors';
 import { useAuth } from '@/context/AuthContext';
 import { barberService } from '@/services/barberService'; 
 import { dayMap } from '@/utils/dateMapper';
 
 const INITIAL_SCHEDULE =[
-    { id: '1', day: 'Monday', active: false, start: '09:00 AM', end: '06:00 PM' },
-    { id: '2', day: 'Tuesday', active: false, start: '09:00 AM', end: '06:00 PM' },
-    { id: '3', day: 'Wednesday', active: false, start: '09:00 AM', end: '06:00 PM' },
-    { id: '4', day: 'Thursday', active: false, start: '09:00 AM', end: '06:00 PM' },
-    { id: '5', day: 'Friday', active: false, start: '09:00 AM', end: '06:00 PM' },
-    { id: '6', day: 'Saturday', active: false, start: '09:00 AM', end: '06:00 PM' },
-    { id: '0', day: 'Sunday', active: false, start: '09:00 AM', end: '06:00 PM' },
+    { id: '1', day: 'Lunes', active: false, start: '09:00 AM', end: '06:00 PM' },
+    { id: '2', day: 'Martes', active: false, start: '09:00 AM', end: '06:00 PM' },
+    { id: '3', day: 'Miércoles', active: false, start: '09:00 AM', end: '06:00 PM' },
+    { id: '4', day: 'Jueves', active: false, start: '09:00 AM', end: '06:00 PM' },
+    { id: '5', day: 'Viernes', active: false, start: '09:00 AM', end: '06:00 PM' },
+    { id: '6', day: 'Sábado', active: false, start: '09:00 AM', end: '06:00 PM' },
+    { id: '0', day: 'Domingo', active: false, start: '09:00 AM', end: '06:00 PM' },
 ];
 
 const formatTo12H = (time24h: string) => {
@@ -28,7 +29,25 @@ const formatTo12H = (time24h: string) => {
     return `${h.toString().padStart(2, '0')}:${minutes} ${ampm}`;
 };
 
-// Generador de horas para el Picker (de 06:00 AM a 10:00 PM)
+// Helper reforzado a prueba de fallos
+const parseTime = (timeStr: string) => {
+    try {
+        if (!timeStr || timeStr === '-') return 0;
+        const parts = timeStr.trim().split(' ');
+        if (parts.length < 2) return 0;
+        
+        let [hours, minutes] = parts[0].split(':').map(Number);
+        const modifier = parts[1];
+        
+        if (hours === 12 && modifier === 'AM') hours = 0;
+        if (hours !== 12 && modifier === 'PM') hours += 12;
+        
+        return hours + (minutes / 60);
+    } catch (e) {
+        return 0;
+    }
+};
+
 const generateTimeOptions = () => {
     const times =[];
     for (let i = 6; i <= 22; i++) {
@@ -50,6 +69,9 @@ export default function AvailabilityScreen() {
     const [schedule, setSchedule] = useState(INITIAL_SCHEDULE);
     const [loadingSchedule, setLoadingSchedule] = useState(false);
     
+    // Estado para el Modal de Error/Éxito (InfoModal)
+    const [infoModal, setInfoModal] = useState({ visible: false, title: '', message: '' });
+
     // Estado para el Modal Selector de Horas
     const [pickerVisible, setPickerVisible] = useState(false);
     const [activeSelection, setActiveSelection] = useState<{ id: string, type: 'start' | 'end' } | null>(null);
@@ -84,14 +106,7 @@ export default function AvailabilityScreen() {
     const stats = useMemo(() => {
         let totalH = 0;
         let activeDays = 0;
-        const parseTime = (timeStr: string) => {
-            if (!timeStr || timeStr === '-') return 0;
-            const [time, modifier] = timeStr.split(' ');
-            let [hours, minutes] = time.split(':').map(Number);
-            if (hours === 12 && modifier === 'AM') hours = 0;
-            if (hours !== 12 && modifier === 'PM') hours += 12;
-            return hours + (minutes / 60);
-        };
+        
         schedule.forEach(item => {
             if (item.active) {
                 const diff = parseTime(item.end) - parseTime(item.start);
@@ -113,17 +128,35 @@ export default function AvailabilityScreen() {
 
     const handleUpdateSchedule = async () => {
         if (!authState.userId) {
-            Alert.alert("Error", "Sesión no válida. Inicia sesión nuevamente.");
+            setInfoModal({ visible: true, title: 'Error', message: 'Sesión no válida. Inicia sesión nuevamente.' });
             return;
         }
 
         try {
+            // --- VALIDACIÓN DE HORAS ---
+            const invalidDays = schedule.filter(item => {
+                if (!item.active) return false;
+                // Si Inicio es Mayor o Igual al Fin, es inválido
+                return parseTime(item.start) >= parseTime(item.end);
+            });
+
+            if (invalidDays.length > 0) {
+                const badDays = invalidDays.map(d => d.day).join(', ');
+                setInfoModal({
+                    visible: true,
+                    title: 'Horario Inválido',
+                    message: `La hora de SALIDA no puede ser menor o igual a la hora de ENTRADA el:\n\n${badDays}\n\nPor favor, corrige tu configuración.`
+                });
+                return; 
+            }
+            
             setLoadingSchedule(true); 
             await barberService.upsertWorkSchedule(authState.userId, schedule);
-            Alert.alert("Ritual Actualizado", "El horario ha sido guardado correctamente.");
+            setInfoModal({ visible: true, title: 'Ritual Actualizado', message: 'El horario ha sido guardado correctamente en tu agenda.' });
+            
         } catch (error: any) {
             console.error("Fallo al guardar:", error);
-            Alert.alert("Error al Guardar", error.message || "Error al contactar con la base de datos.");
+            setInfoModal({ visible: true, title: 'Error al Guardar', message: error.message || "Error al contactar con la base de datos." });
         } finally {
             setLoadingSchedule(false);
         }
@@ -149,16 +182,7 @@ export default function AvailabilityScreen() {
                 
                 <Text style={styles.mainTitle}>Horario de{"\n"}Disponibilidad</Text>
                 <Text style={styles.description}>Configura tus horas de maestría y ritual.</Text>
-
-                <View style={styles.actionButtonContainer}>
-                    <CustomButton 
-                        title={loadingSchedule ? "GUARDANDO..." : "ACTUALIZAR HORARIO"} 
-                        onPress={handleUpdateSchedule} 
-                        disabled={loadingSchedule} 
-                        loading={loadingSchedule}
-                    />
-                </View>
-
+               
                 {/* TARJETA DE HORARIOS */}
                 <View style={styles.sectionCard}>
                     <View style={styles.cardHeader}>
@@ -179,14 +203,14 @@ export default function AvailabilityScreen() {
                                 {item.active ? (
                                     <View style={styles.timeActionRow}>
                                         <TouchableOpacity style={styles.timeBtn} onPress={() => openTimePicker(item.id, 'start')}>
-                                            <Text style={styles.timeLabel}>INICIO</Text>
+                                            <Text style={styles.timeLabel}>ENTRADA</Text>
                                             <Text style={styles.timeValue}>{item.start}</Text>
                                         </TouchableOpacity>
                                         
                                         <Text style={styles.timeSeparator}>-</Text>
                                         
                                         <TouchableOpacity style={styles.timeBtn} onPress={() => openTimePicker(item.id, 'end')}>
-                                            <Text style={styles.timeLabel}>FIN</Text>
+                                            <Text style={styles.timeLabel}>SALIDA</Text>
                                             <Text style={styles.timeValue}>{item.end}</Text>
                                         </TouchableOpacity>
                                     </View>
@@ -196,6 +220,15 @@ export default function AvailabilityScreen() {
                             </View>
                         </View>
                     ))}
+                </View>
+
+                 <View style={styles.actionButtonContainer}>
+                    <CustomButton 
+                        title={loadingSchedule ? "GUARDANDO..." : "ACTUALIZAR HORARIO"} 
+                        onPress={handleUpdateSchedule} 
+                        disabled={loadingSchedule} 
+                        loading={loadingSchedule}
+                    />
                 </View>
 
                 {/* TARJETA DE ESTADÍSTICAS */}
@@ -219,7 +252,7 @@ export default function AvailabilityScreen() {
             </ScrollView>
 
             {/* MODAL DE SELECCIÓN DE HORA */}
-            <Modal visible={pickerVisible} animationType="slide" transparent={true}>
+            <RNModal visible={pickerVisible} animationType="slide" transparent={true}>
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
                         <Text style={styles.modalTitle}>Selecciona la Hora</Text>
@@ -238,7 +271,15 @@ export default function AvailabilityScreen() {
                         </TouchableOpacity>
                     </View>
                 </View>
-            </Modal>
+            </RNModal>
+
+            {/* MODAL DE INFO / ERRORES (Garantiza que siempre se muestre el mensaje) */}
+            <InfoModal 
+                visible={infoModal.visible}
+                title={infoModal.title}
+                message={infoModal.message}
+                onClose={() => setInfoModal({ ...infoModal, visible: false })}
+            />
         </SafeAreaView>
     );
 }
