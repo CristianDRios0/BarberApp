@@ -8,23 +8,29 @@ import { MainHeader } from '@/components/MainHeader';
 import { router, useRouter } from 'expo-router';
 import { useService } from '@/context/ServiceContext';
 import { useBarber } from '@/context/BarberContext';
+import { InfoModal } from '@/components/InfoModal';
 
 export default function BookingScreen() {
     const router = useRouter();
     const colorScheme = useColorScheme() ?? 'light';
     const themeColors = Colors[colorScheme];
     const styles = createStyles(themeColors);
-    const [selectedBarber, setSelectedBarber] = useState('2');
+    const [selectedBarber, setSelectedBarber] = useState<string | null>(null);
     const [selectedService, setSelectedService] = useState<string | null>(null);
     const { servicios, loading: loadingServicios } = useService();
     const { barberos, loading: loadingBarberos } = useBarber();
+    const [infoModal, setInfoModal] = useState({
+        visible: false,
+        title: '',
+        message: ''
+    });
 
     // Sincronizar selección inicial cuando los servicios y barberos carguen
     useEffect(() => {
         if (servicios.length > 0 && !selectedService) {
             setSelectedService(servicios[0].id);
         }
-         if (barberos.length > 0 && !selectedBarber) {
+        if (barberos.length > 0 && !selectedBarber) {
             setSelectedBarber(barberos[0].id);
         }
     }, [servicios, barberos]);
@@ -32,6 +38,24 @@ export default function BookingScreen() {
     // Búsqueda en los datos de los contextos cargados
     const currentService = servicios.find(s => s.id === selectedService);
     const currentBarber = barberos.find(b => b.id === selectedBarber);
+
+    const handleContinue = () => {
+        if (!selectedBarber) {
+            setInfoModal({
+                visible: true,
+                title: 'Selección Pendiente',
+                message: 'Para continuar con el ritual, por favor selecciona al Maestro Barbero de tu preferencia.'
+            });
+            return;
+        }
+        router.push({
+            pathname: '/booking/calendar',
+            params: {
+                serviceId: selectedService,
+                barberId: selectedBarber
+            }
+        });
+    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -55,9 +79,9 @@ export default function BookingScreen() {
                             onPress={() => setSelectedBarber(barber.id)}
                             style={[styles.barberCard, selectedBarber === barber.id && styles.activeCard]}
                         >
-                            <Image 
-                                source={{ uri: barber.imagenPerfil || 'https://via.placeholder.com/100x120/1B1C1C/D4AF37?text=Barber' }} 
-                                style={styles.barberImage} 
+                            <Image
+                                source={{ uri: barber.imagenPerfil || 'https://via.placeholder.com/100x120/1B1C1C/D4AF37?text=Barber' }}
+                                style={styles.barberImage}
                             />
                             <View style={styles.barberInfo}>
                                 <View style={styles.nameRow}>
@@ -123,18 +147,17 @@ export default function BookingScreen() {
                         <Text style={styles.summaryText}>{currentBarber?.nombre.toUpperCase()}</Text>
                     </View>
                 </View>
-                <CustomButton 
-                    title="Continuar a la agenda" 
-                    onPress={() => router.push({
-                        pathname: '/booking/calendar',
-                        params: {
-                            serviceId: selectedService,
-                            barberId: selectedBarber
-                        }
-                    })} 
-                    disabled={!selectedBarber || !selectedService}
-                    />
+                <CustomButton
+                    title="Continuar a la agenda"
+                    onPress={handleContinue}
+                />
             </View>
+            <InfoModal
+                visible={infoModal.visible}
+                title={infoModal.title}
+                message={infoModal.message}
+                onClose={() => setInfoModal({ ...infoModal, visible: false })}
+            />
         </SafeAreaView>
     );
 }
