@@ -7,8 +7,8 @@ import { MainHeader } from '@/components/MainHeader';
 import { AdminItemCard } from '@/components/StaffCard';
 import { useBarber } from '@/context/BarberContext';
 import { BarberFormModal } from '@/components/BarberFormModal';
-import { ConfirmModal } from '@/components/ConfirmModal'; // Importado
-import { InfoModal } from '@/components/InfoModal';       // Importado
+import { ConfirmModal } from '@/components/ConfirmModal';
+import { InfoModal } from '@/components/InfoModal'
 import { CreateUser } from '@/services/client-services';
 import { Perfil } from '@/models/Perfil';
 
