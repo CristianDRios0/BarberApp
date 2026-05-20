@@ -43,6 +43,13 @@ export default function BarberLayout() {
                         title: 'Turnos',
                         tabBarIcon: ({ color }) => <Ionicons name='time-outline' size={24} color={color} />
                     }} />
+                    
+                   <Tabs.Screen
+                    name="profileBarber"
+                    options={{
+                        title: 'Perfil',
+                        tabBarIcon: ({ color }) => <Ionicons name="person-circle-outline" size={24} color={color} />
+                    }} />
 
             </Tabs>
         </BarberProvider>
