@@ -8,6 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 import { bookingService } from '@/services/booking-services';
 import { format } from 'date-fns/format';
 import { es } from 'date-fns/locale';
+import { useNavigation } from 'expo-router';
 
 export default function ProfileScreen() {
     const colorScheme = useColorScheme() ?? 'light';
@@ -15,6 +16,8 @@ export default function ProfileScreen() {
     const styles = createStyles(themeColors);
 
     const { authState } = useAuth();
+
+    const navigation = useNavigation();
 
     const [history, setHistory] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -34,7 +37,11 @@ export default function ProfileScreen() {
 
     useEffect(() => {
         fetchHistory();
-    }, [authState.userId]);
+        const unsubscribe = navigation.addListener('focus', () => {
+            fetchHistory();
+        });
+        return unsubscribe;
+    }, [navigation, authState.userId]);
 
     return (
         <SafeAreaView style={styles.container}>

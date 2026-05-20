@@ -123,7 +123,6 @@ export default function BookingScreen() {
                                 </View>
                                 <View style={styles.serviceTextContent}>
                                     <Text style={styles.serviceName}>{service.nombre}</Text>
-                                    <Text style={styles.serviceDetail}>{service.id}</Text>
                                 </View>
                                 <Text style={styles.servicePrice}>${service.costo}</Text>
                             </TouchableOpacity>
