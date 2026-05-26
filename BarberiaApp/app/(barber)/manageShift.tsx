@@ -136,7 +136,7 @@ export default function AvailabilityScreen() {
             // --- VALIDACIÓN DE HORAS ---
             const invalidDays = schedule.filter(item => {
                 if (!item.active) return false;
-                // Si Inicio es Mayor o Igual al Fin, es inválido
+                
                 return parseTime(item.start) >= parseTime(item.end);
             });
 
