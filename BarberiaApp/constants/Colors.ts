@@ -23,7 +23,8 @@ export default {
     card: palette.surface,
     border: palette.outline,
     notification: palette.primaryContainer,
-    placeholder: palette.outline
+    placeholder: palette.outline,
+    error: palette.error
   },
   dark: {
     text: palette.onSurface,
@@ -34,6 +35,7 @@ export default {
     card: palette.surface,
     border: palette.outline,
     notification: palette.primaryContainer,
-    placeholder: palette.outline
+    placeholder: palette.outline,
+    error: palette.error
   },
 };

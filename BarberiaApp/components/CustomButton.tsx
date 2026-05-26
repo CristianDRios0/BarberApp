@@ -6,23 +6,27 @@ interface Props {
   title: string;
   onPress: () => void;
   loading?: boolean;
+  disabled?: boolean;
   type?: 'primary' | 'secondary';
 }
 
-export const CustomButton = ({ title, onPress, loading, type = 'primary' }: Props) => {
+export const CustomButton = ({ title, onPress, disabled, loading, type = 'primary' }: Props) => {
 
   const colorScheme = useColorScheme() ?? 'light'; // Obtiene el tema actual por defecto esta es claro
   const themeColors = Colors[colorScheme]; // Obtiene los colores definidos para el tema actual en la contante Colors.ts
-  const styles = createStyles(themeColors); // Crea los estilos utilizando los colores del tema actual
+  const styles = createStyles(themeColors); // Crea los estilos utilizando los colores del tema actual 
+  const isInteractionDisabled = loading || disabled;  // El botón se bloquea si está cargando o si se marca como deshabilitado manualmente
+  
 
   return (
     <TouchableOpacity 
       style={[
         styles.button, 
-        type === 'primary' ? styles.primary : styles.secondary
+        type === 'primary' ? styles.primary : styles.secondary,
+        isInteractionDisabled && { opacity: 0.5 } // Feedback visual universal      
       ]} 
       onPress={onPress}
-      disabled={loading}
+      disabled={isInteractionDisabled}
       activeOpacity={0.8}
     >
       {loading ? (
