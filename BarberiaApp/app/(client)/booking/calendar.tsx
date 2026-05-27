@@ -97,7 +97,7 @@ export default function TimeSelectionScreen() {
             setIsFetchingSlots(true);
             const dayOfWeek = selectedDate.getDay();
 
-            // Consulta el turno del barbero para este día específico
+            // Consulta el turno del barbero
             const { data: turnos, error } = await supabase
                 .from('Turno')
                 .select('horaInicio, horaFin')
@@ -110,37 +110,33 @@ export default function TimeSelectionScreen() {
                 return;
             }
 
-            // Consulta qué horas YA están reservadas en la base de datos
-            // Usamos el servicio que creamos en el paso 1
+            // REFUERZO SENIOR: Forzamos la obtención de slots ocupados
             const occupiedTimes = await bookingService.getOccupiedSlots(barberId, selectedDate);
 
             const morning: any[] = [];
             const afternoon: any[] = [];
             const now = new Date();
 
-            // fragmentar el horario en intervalos de 30 minutos
             turnos.forEach(turno => {
                 let current = parse(turno.horaInicio, 'HH:mm:ss', selectedDate);
                 const end = parse(turno.horaFin, 'HH:mm:ss', selectedDate);
 
                 while (isBefore(current, end)) {
                     const timeLabel = format(current, 'h:mm a').toUpperCase();
-                    const isBookedInDB = occupiedTimes.includes(timeLabel.replace(/^0/, '')); // Valida si la hora está ocupada según la DB (sin ceros a la izquierda)
-                    const isPast = isSameDay(selectedDate, now) && isBefore(current, now); // Comprobamos si la hora ya pasó (solo si el día seleccionado es HOY)
+                    // Comparamos con los datos recién traídos de la DB
+                    const isBookedInDB = occupiedTimes.includes(timeLabel.replace(/^0/, '')); 
+                    const isPast = isSameDay(selectedDate, now) && isBefore(current, now);
 
                     const slot = {
                         time: timeLabel,
                         isBooked: isBookedInDB || isPast
                     };
 
-                    // Clasificamos según AM o PM y se inserta en el estado correcto
                     if (format(current, 'a') === 'AM') {
                         morning.push(slot);
                     } else {
                         afternoon.push(slot);
                     }
-
-                    // Sumamos 30 minutos al puntero
                     current = addMinutes(current, 30);
                 }
             });
@@ -148,10 +144,14 @@ export default function TimeSelectionScreen() {
             setMorningSlots(morning);
             setAfternoonSlots(afternoon);
 
-            // Auto-seleccionar el primer horario libre
+            // IMPORTANTE: Si el horario que estaba seleccionado ahora está ocupado, lo desmarcamos
             const allSlots = [...morning, ...afternoon];
-            const firstFree = allSlots.find(s => !s.isBooked);
-            if (firstFree) setSelectedTime(firstFree.time);
+            const currentSelectedStillAvailable = allSlots.find(s => s.time === selectedTime && !s.isBooked);
+            
+            if (!currentSelectedStillAvailable) {
+                const firstFree = allSlots.find(s => !s.isBooked);
+                setSelectedTime(firstFree ? firstFree.time : null);
+            }
 
         } catch (err) {
             console.error("Error al calcular intervalos:", err);
