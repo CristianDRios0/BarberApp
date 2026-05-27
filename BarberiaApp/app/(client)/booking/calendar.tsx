@@ -122,9 +122,14 @@ export default function TimeSelectionScreen() {
                 const end = parse(turno.horaFin, 'HH:mm:ss', selectedDate);
 
                 while (isBefore(current, end)) {
+                    // Generamos el label usando la misma regla de date-fns
                     const timeLabel = format(current, 'h:mm a').toUpperCase();
-                    // Comparamos con los datos recién traídos de la DB
-                    const isBookedInDB = occupiedTimes.includes(timeLabel.replace(/^0/, '')); 
+                    
+                    // REFUERZO SENIOR: Comparación limpia
+                    // Ya no necesitamos el .replace(/^0/, '') porque format(current, 'h:mm a') 
+                    // ya quita el cero inicial por defecto en date-fns.
+                    const isBookedInDB = occupiedTimes.includes(timeLabel);
+                    
                     const isPast = isSameDay(selectedDate, now) && isBefore(current, now);
 
                     const slot = {

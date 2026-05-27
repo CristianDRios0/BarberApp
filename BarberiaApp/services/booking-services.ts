@@ -1,10 +1,9 @@
 import { supabase } from "@/supabaseClient";
-import { startOfDay, endOfDay } from "date-fns";
+import { startOfDay, endOfDay, format } from "date-fns";
 
 export const bookingService = {
 
     async getOccupiedSlots(barberId: string, date: Date) {
-        // Definimos el rango del día (00:00:00 a 23:59:59)
         const start = startOfDay(date).toISOString();
         const end = endOfDay(date).toISOString();
 
@@ -19,19 +18,13 @@ export const bookingService = {
             .lte('fechaHoraInicio', end)
             .neq('EstadoReserva.codigo', 'CANC'); 
 
-        if (error) {
-            console.error("Error consultando reservas ocupadas:", error.message);
-            throw error;
-        }
+        if (error) throw error;
 
-        // Formateamos la salida para que el calendario pueda comparar
+        // REFUERZO SENIOR: Usamos format de date-fns para consistencia total
         return data.map(res => {
             const d = new Date(res.fechaHoraInicio);
-            return d.toLocaleTimeString('en-US', { 
-                hour: '2-digit', 
-                minute: '2-digit', 
-                hour12: true 
-            }).replace(/^0/, ''); // Convertimos a formato "9:00 AM"
+            // Esto devolverá exactamente "9:00 AM" o "10:30 PM" sin ceros a la izquierda
+            return format(d, 'h:mm a').toUpperCase();
         });
     },
 
