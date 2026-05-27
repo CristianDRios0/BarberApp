@@ -26,7 +26,8 @@ export default function ClientLayout() {
                     fontSize: 10,
                     letterSpacing: 1,
                 },
-            }}>
+                unmountOnBlur: true, 
+            } as any }>
             <Tabs.Screen
                 name="booking"
                 options={{
