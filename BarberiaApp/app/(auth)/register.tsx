@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, useColorScheme, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, useColorScheme, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { CustomInput } from '@/components/CustomInput';
 import { CustomButton } from '@/components/CustomButton';
@@ -109,67 +109,73 @@ export default function RegisterScreen() {
     return (
         <SafeAreaView style={styles.container}>
 
-            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={{ flex: 1 }}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+            >
+                <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
-                <Text style={styles.logo}>THE RITUAL</Text>
+                    <Text style={styles.logo}>THE RITUAL</Text>
 
-                <View style={styles.formContainer}>
-                    <Text style={styles.title}>Crear Cuenta</Text>
-                    <Text style={styles.subtitle}>Sé parte de la nueva era del cuidado masculino.</Text>
+                    <View style={styles.formContainer}>
+                        <Text style={styles.title}>Crear Cuenta</Text>
+                        <Text style={styles.subtitle}>Sé parte de la nueva era del cuidado masculino.</Text>
 
-                    <CustomInput
-                        label="Nombres"
-                        placeholder="John"
-                        value={nombre}
-                        onChangeText={setNombre}
-                    />
-                    <CustomInput
-                        label="Apellidos"
-                        placeholder="Doe"
-                        value={apellido}
-                        onChangeText={setApellido}
-                    />
-                    <CustomInput
-                        label="Documento de Identidad"
-                        placeholder="123456789"
-                        value={documento}
-                        onChangeText={setDocumento}
-                    />
-                    <CustomInput
-                        label="Teléfono"
-                        placeholder="300 000 0000"
-                        value={telefono}
-                        onChangeText={setTelefono}
-                    />
-                    <CustomInput
-                        label="Correo electrónico"
-                        placeholder="cliente@ritual.com"
-                        value={correo}
-                        onChangeText={setCorreo}
-                    />
-
-
-                    <View style={{ marginTop: 10 }}>
-                        <CustomButton
-                            title="Registrarme"
-                            loading={isLoading}
-                            onPress={handleRegister}
+                        <CustomInput
+                            label="Nombres"
+                            placeholder="John"
+                            value={nombre}
+                            onChangeText={setNombre}
                         />
-                    </View>
+                        <CustomInput
+                            label="Apellidos"
+                            placeholder="Doe"
+                            value={apellido}
+                            onChangeText={setApellido}
+                        />
+                        <CustomInput
+                            label="Documento de Identidad"
+                            placeholder="123456789"
+                            value={documento}
+                            onChangeText={setDocumento}
+                        />
+                        <CustomInput
+                            label="Teléfono"
+                            placeholder="300 000 0000"
+                            value={telefono}
+                            onChangeText={setTelefono}
+                        />
+                        <CustomInput
+                            label="Correo electrónico"
+                            placeholder="cliente@ritual.com"
+                            value={correo}
+                            onChangeText={setCorreo}
+                        />
 
-                    <View style={styles.loginContainer}>
-                        <Text style={styles.loginText}>
-                            ¿Ya tienes una cuenta?{' '}
-                        </Text>
-                        <TouchableOpacity onPress={() => router.back()}>
-                            <Text style={styles.loginLink}>
-                                Inicia sesión.
+
+                        <View style={{ marginTop: 10 }}>
+                            <CustomButton
+                                title="Registrarme"
+                                loading={isLoading}
+                                onPress={handleRegister}
+                            />
+                        </View>
+
+                        <View style={styles.loginContainer}>
+                            <Text style={styles.loginText}>
+                                ¿Ya tienes una cuenta?{' '}
                             </Text>
-                        </TouchableOpacity>
+                            <TouchableOpacity onPress={() => router.back()}>
+                                <Text style={styles.loginLink}>
+                                    Inicia sesión.
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
-                </View>
 
-            </ScrollView>
+                </ScrollView>
+            </KeyboardAvoidingView>
             <InfoModal
                 visible={infoModal.visible}
                 title={infoModal.title}
