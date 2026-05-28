@@ -17,14 +17,15 @@
       "supportsTablet": true
     },
     "android": {
-      "package": "com.cristianrios76.theritual",
-      "versionCode": 1,
       "adaptiveIcon": {
+        "package": "com.tuusuario.theritual",
+        "versionCode": 1,
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.juanrios98.BarberiaApp"
     },
     "web": {
       "bundler": "metro",
@@ -42,7 +43,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "5dfa948c-ce11-44d6-bc4b-75644780b5ee"
+        "projectId": "4da0b7bf-8692-4298-a669-154aeb98453e"
       }
     }
   }

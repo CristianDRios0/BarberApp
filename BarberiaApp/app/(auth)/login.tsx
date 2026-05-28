@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, useColorScheme } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, useColorScheme, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { CustomInput } from '@/components/CustomInput';
 import { CustomButton } from '@/components/CustomButton';
 import { useRouter } from 'expo-router';
@@ -46,6 +46,15 @@ export default function LoginScreen() {
 
     return (
         <SafeAreaView style={styles.container}>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={styles.keyboardAvoidingView}
+            >
+                <ScrollView 
+                        contentContainerStyle={styles.scrollContent}
+                        showsVerticalScrollIndicator={false}
+                        keyboardShouldPersistTaps="handled"
+                    >
             <View style={styles.content}>
 
                 <Text style={styles.logo}>THE RITUAL</Text>
@@ -89,6 +98,8 @@ export default function LoginScreen() {
                     onClose={() => setInfoModal({ ...infoModal, visible: false })}
                 />
             </View>
+            </ScrollView>
+            </KeyboardAvoidingView>
         </SafeAreaView>
     );
 }
@@ -97,6 +108,12 @@ const createStyles = (themeColors: any) => StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: themeColors.background
+    },
+    keyboardAvoidingView: {
+        flex: 1,
+    },
+    scrollContent: {
+        flexGrow: 1, // Crucial para que el contenedor interno mantenga el centrado cuando no hay teclado
     },
     content: {
         flex: 1,
