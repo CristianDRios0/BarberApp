@@ -9,6 +9,7 @@ import { router, useRouter } from 'expo-router';
 import { useService } from '@/context/ServiceContext';
 import { useBarber } from '@/context/BarberContext';
 import { InfoModal } from '@/components/InfoModal';
+import { useNavigation } from 'expo-router';
 
 export default function BookingScreen() {
     const router = useRouter();
@@ -17,8 +18,9 @@ export default function BookingScreen() {
     const styles = createStyles(themeColors);
     const [selectedBarber, setSelectedBarber] = useState<string | null>(null);
     const [selectedService, setSelectedService] = useState<string | null>(null);
-    const { servicios, loading: loadingServicios } = useService();
-    const { barberos, loading: loadingBarberos } = useBarber();
+    const { servicios, loading: loadingServicios, refreshServices  } = useService();
+    const { barberos, loading: loadingBarberos, refreshBarbers } = useBarber();
+    const navigation = useNavigation();
     const [infoModal, setInfoModal] = useState({
         visible: false,
         title: '',
@@ -34,6 +36,16 @@ export default function BookingScreen() {
             setSelectedBarber(barberos[0].id);
         }
     }, [servicios, barberos]);
+
+    useEffect(() => {
+        // Esta función se ejecuta cada vez que el usuario toca la pestaña "Reserva"
+        const unsubscribe = navigation.addListener('focus', () => {
+            refreshServices();
+            refreshBarbers();
+        });
+
+        return unsubscribe;
+    }, [navigation]);
 
     // Búsqueda en los datos de los contextos cargados
     const currentService = servicios.find(s => s.id === selectedService);
