@@ -1,4 +1,4 @@
-import { KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, useColorScheme, View } from 'react-native'
+import { Keyboard, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, useColorScheme, View } from 'react-native'
 import React, { useEffect, useState } from 'react'
 import { Servicio } from '@/models/Servicio';
 import Colors from '@/constants/Colors';
@@ -83,13 +83,123 @@ export const ServiceFormModal = ({ visible, onClose, onSubmit, initialData }: Pr
         }
     };
 
-    return (
-        <Modal visible={visible} animationType="slide" transparent>
-            <View style={styles.overlay}>
-                <KeyboardAvoidingView
-                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                    style={[styles.container, { backgroundColor: themeColors.background }]}
-                >
+//     return (
+//         <Modal visible={visible} animationType="slide" transparent>
+//             <View style={styles.overlay}>
+//                 <KeyboardAvoidingView
+//                     behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+//                     style={[styles.container, { backgroundColor: themeColors.background }]}
+//                 >
+//                     <View style={styles.header}>
+//                         <View>
+//                             <Text style={[styles.stepLabel, { color: themeColors.tint }]}>CATÁLOGO</Text>
+//                             <Text style={[styles.title, { color: themeColors.text }]}>
+//                                 {initialData ? 'Editar Servicio' : 'Nuevo Servicio'}
+//                             </Text>
+//                         </View>
+//                         <TouchableOpacity onPress={onClose}>
+//                             <Ionicons name="close" size={24} color={themeColors.text} />
+//                         </TouchableOpacity>
+//                     </View>
+
+//                     <View style={styles.yellowDivider} />
+
+//                     <ScrollView showsVerticalScrollIndicator={false}>
+//                         <FormInput
+//                             label="Nombre del Servicio"
+//                             placeholder="Ej. Corte de Cabello"
+//                             value={form.nombre ?? ''}
+//                             error={errors.nombre}
+//                             onChangeText={(v) => handleInputChange('nombre', v)}
+//                         />
+
+//                         <FormInput
+//                             label="Costo ($)"
+//                             placeholder="Ej. 25000"
+//                             value={form.costo}
+//                             error={errors.costo}
+//                             keyboardType="numeric"
+//                             onChangeText={(v) => {
+//                                 handleInputChange('costo', v);
+//                             }}
+//                         />
+
+//                         <View style={styles.buttonContainer}>
+//                             <CustomButton
+//                                 title={initialData ? "Actualizar Servicio" : "Guardar Servicio"}
+//                                 onPress={handleSave}
+//                                 loading={loading}
+//                             />
+//                         </View>
+//                     </ScrollView>
+//                 </KeyboardAvoidingView>
+//             </View>
+//         </Modal>
+
+//     )
+// }
+
+// const styles = StyleSheet.create({
+//     overlay: {
+//     flex: 1,
+//     backgroundColor: 'rgba(0,0,0,0.85)',
+//     justifyContent: 'flex-end',
+//   },
+//   container: {
+//     height: '65%', // Menos alta que la de barberos ya que tiene menos campos
+//     borderTopLeftRadius: 30,
+//     borderTopRightRadius: 30,
+//     padding: 25,
+//   },
+//   header: {
+//     flexDirection: 'row',
+//     justifyContent: 'space-between',
+//     alignItems: 'flex-start',
+//   },
+//   stepLabel: {
+//     fontFamily: 'InterSemi',
+//     fontSize: 10,
+//     letterSpacing: 2,
+//     marginBottom: 5,
+//   },
+//   title: {
+//     fontFamily: 'Serif',
+//     fontSize: 28,
+//   },
+//   closeBtn: {
+//     padding: 5,
+//   },
+//   yellowDivider: {
+//     width: 60,
+//     height: 3,
+//     backgroundColor: '#D4AF37',
+//     marginTop: 15,
+//     marginBottom: 30,
+//   },
+//   scroll: {
+//     paddingBottom: 20,
+//   },
+//   buttonContainer: {
+//     marginTop: 20,
+//   }
+// })
+
+return (
+        <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+            {/* 1. PADRE EN EL ÁRBOL: Controla el espacio total del viewport de la modal */}
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={styles.overlay}
+            >
+                {/* Permite ocultar el teclado presionando el fondo oscurecido exterior */}
+                <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                    <View style={styles.blurArea} />
+                </TouchableWithoutFeedback>
+
+                {/* 2. TARJETA CONTENEDORA: Envuelve de forma homogénea el header y el scroll */}
+                <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+                    
+                    {/* Header integrado para evitar saltos de maquetación */}
                     <View style={styles.header}>
                         <View>
                             <Text style={[styles.stepLabel, { color: themeColors.tint }]}>CATÁLOGO</Text>
@@ -97,14 +207,19 @@ export const ServiceFormModal = ({ visible, onClose, onSubmit, initialData }: Pr
                                 {initialData ? 'Editar Servicio' : 'Nuevo Servicio'}
                             </Text>
                         </View>
-                        <TouchableOpacity onPress={onClose}>
+                        <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
                             <Ionicons name="close" size={24} color={themeColors.text} />
                         </TouchableOpacity>
                     </View>
 
                     <View style={styles.yellowDivider} />
 
-                    <ScrollView showsVerticalScrollIndicator={false}>
+                    {/* 3. SCROLL: Con soporte nativo para interactuar con el botón al primer toque */}
+                    <ScrollView 
+                        showsVerticalScrollIndicator={false}
+                        contentContainerStyle={styles.scroll}
+                        keyboardShouldPersistTaps="handled"
+                    >
                         <FormInput
                             label="Nombre del Servicio"
                             placeholder="Ej. Corte de Cabello"
@@ -119,9 +234,7 @@ export const ServiceFormModal = ({ visible, onClose, onSubmit, initialData }: Pr
                             value={form.costo}
                             error={errors.costo}
                             keyboardType="numeric"
-                            onChangeText={(v) => {
-                                handleInputChange('costo', v);
-                            }}
+                            onChangeText={(v) => handleInputChange('costo', v)}
                         />
 
                         <View style={styles.buttonContainer}>
@@ -132,24 +245,27 @@ export const ServiceFormModal = ({ visible, onClose, onSubmit, initialData }: Pr
                             />
                         </View>
                     </ScrollView>
-                </KeyboardAvoidingView>
-            </View>
+                </View>
+            </KeyboardAvoidingView>
         </Modal>
-
     )
 }
 
 const styles = StyleSheet.create({
-    overlay: {
+  overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.85)',
     justifyContent: 'flex-end',
   },
+  blurArea: {
+    ...StyleSheet.absoluteFillObject,
+  },
   container: {
-    height: '65%', // Menos alta que la de barberos ya que tiene menos campos
+    height: '62%', // Ajustado de 65% a 62% para optimizar la proporción visual de los pocos campos con el teclado numérico abierto
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
-    padding: 25,
+    paddingHorizontal: 25,
+    paddingTop: 25,
   },
   header: {
     flexDirection: 'row',
@@ -174,12 +290,13 @@ const styles = StyleSheet.create({
     height: 3,
     backgroundColor: '#D4AF37',
     marginTop: 15,
-    marginBottom: 30,
+    marginBottom: 20, // Reducido para evitar desperdicio de espacio vertical
   },
   scroll: {
-    paddingBottom: 20,
+    paddingBottom: 40, // Padding seguro para que el botón de Guardar flote libremente arriba del teclado
   },
   buttonContainer: {
-    marginTop: 20,
+    marginTop: 15,
+    marginBottom: 10,
   }
 })

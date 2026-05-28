@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, useColorScheme, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, useColorScheme, ScrollView, Platform, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { CustomInput } from '@/components/CustomInput';
@@ -124,6 +124,11 @@ export default function VerifyScreen() {
 
     return (
         <SafeAreaView style={styles.container}>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={styles.keyboardAvoidingView}>
+
+                 
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
                 <Text style={styles.logo}>THE RITUAL</Text>
@@ -173,13 +178,15 @@ export default function VerifyScreen() {
                         </TouchableOpacity>
                     </View>
                 </View>
-            </ScrollView>
+            
             <InfoModal
                     visible={infoModal.visible}
                     title={infoModal.title}
                     message={infoModal.message}
                     onClose={() => setInfoModal({ ...infoModal, visible: false })}
                 />
+             </ScrollView>
+                </KeyboardAvoidingView>
         </SafeAreaView>
     );
 }
@@ -188,6 +195,9 @@ const createStyles = (themeColors: any) => StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: themeColors.background,
+    },
+    keyboardAvoidingView: {
+        flex: 1,
     },
     scrollContent: {
         flexGrow: 1,

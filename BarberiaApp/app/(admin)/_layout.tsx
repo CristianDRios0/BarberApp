@@ -3,6 +3,8 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { Ionicons } from '@expo/vector-icons';
+import { BarberProvider } from '@/context/BarberContext';
+import { ServiceProvider } from '@/context/ServiceContext';
 
 function TabBarIcon(props: {
   name: React.ComponentProps<typeof FontAwesome>['name'];
@@ -16,6 +18,8 @@ export default function AdminLayout() {
     const themeColors = Colors[colorScheme];
     
     return (
+        <BarberProvider>
+        <ServiceProvider>
         <Tabs
             screenOptions={{
                 headerShown: false,
@@ -57,5 +61,8 @@ export default function AdminLayout() {
              }}
             />
         </Tabs>
+        </ServiceProvider>
+        </BarberProvider>
+        
     );
 }
